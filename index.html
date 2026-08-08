@@ -15,6 +15,11 @@
     --good: #4f7a4a;
     --bad: #b1503c;
     --shadow: 0 1px 2px rgba(30, 30, 20, 0.06), 0 8px 24px -12px rgba(30, 30, 20, 0.18);
+    --heat-0: #e4e7e1;
+    --heat-1: #f0ddc0;
+    --heat-2: #dba85f;
+    --heat-3: #c07f34;
+    --heat-4: #8a5220;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
@@ -32,6 +37,11 @@
       --good: #7fb677;
       --bad: #d97a63;
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 28px -12px rgba(0, 0, 0, 0.55);
+      --heat-0: #23271f;
+      --heat-1: #3a2c15;
+      --heat-2: #6b4a1e;
+      --heat-3: #a2701f;
+      --heat-4: #dd9c4f;
       color-scheme: dark;
     }
   }
@@ -49,6 +59,11 @@
     --good: #7fb677;
     --bad: #d97a63;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 28px -12px rgba(0, 0, 0, 0.55);
+    --heat-0: #23271f;
+    --heat-1: #3a2c15;
+    --heat-2: #6b4a1e;
+    --heat-3: #a2701f;
+    --heat-4: #dd9c4f;
     color-scheme: dark;
   }
 
@@ -278,6 +293,115 @@
     padding-top: 8px;
   }
 
+  /* ---- Tabs ---- */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    padding: 10px 4px;
+    margin-bottom: -1px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .tab-btn + .tab-btn { margin-left: 18px; }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab-panel { display: flex; flex-direction: column; gap: 28px; }
+
+  /* ---- Calendar ---- */
+  .cal-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .year-nav { display: flex; align-items: center; gap: 12px; }
+  .year-nav .btn { padding: 6px 12px; font-size: 14px; }
+  .year-label { font-size: 18px; min-width: 4.5em; text-align: center; }
+
+  .cal-legend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--faint);
+  }
+  .cal-legend .dot { width: 10px; height: 10px; border-radius: 2px; margin: 0 1px; }
+  .cal-legend .dot.heat-0 { background: var(--heat-0); }
+  .cal-legend .dot.heat-1 { background: var(--heat-1); }
+  .cal-legend .dot.heat-2 { background: var(--heat-2); }
+  .cal-legend .dot.heat-3 { background: var(--heat-3); }
+  .cal-legend .dot.heat-4 { background: var(--heat-4); }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .month-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 14px 14px 16px;
+  }
+  .month-card h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-transform: capitalize;
+  }
+  .month-weekdays, .month-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .month-weekdays {
+    margin-bottom: 4px;
+  }
+  .month-weekdays span {
+    font-size: 9px;
+    text-transform: uppercase;
+    color: var(--faint);
+    text-align: center;
+  }
+  .day-cell {
+    aspect-ratio: 1;
+    border: none;
+    border-radius: 3px;
+    background: var(--heat-0);
+    color: var(--muted);
+    font-size: 10px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .day-cell.blank { visibility: hidden; cursor: default; }
+  .day-cell.heat-1 { background: var(--heat-1); color: var(--ink); }
+  .day-cell.heat-2 { background: var(--heat-2); color: var(--ink); }
+  .day-cell.heat-3 { background: var(--heat-3); color: #fff; }
+  .day-cell.heat-4 { background: var(--heat-4); color: #fff; }
+  .day-cell.future { opacity: 0.45; cursor: default; }
+  .day-cell.is-today { box-shadow: inset 0 0 0 2px var(--accent); }
+  .day-cell.selected { box-shadow: inset 0 0 0 2px var(--ink); }
+  .day-cell:not(.blank):not(.future):hover { filter: brightness(0.94); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .day-cell:not(.blank):not(.future):hover { filter: brightness(1.25); }
+  }
+  :root[data-theme="dark"] .day-cell:not(.blank):not(.future):hover { filter: brightness(1.25); }
+
+  .day-detail { display: flex; flex-direction: column; gap: 12px; }
+
   @media (max-width: 560px) {
     .timer-row { grid-template-columns: 1fr; }
     .timer-display { text-align: left; font-size: 38px; }
@@ -285,6 +409,7 @@
     .entry { grid-template-columns: 8px 1fr auto; row-gap: 4px; }
     .entry .range { grid-column: 2 / 3; }
     .entry .del { justify-self: end; }
+    .cal-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
   }
 </style>
 
@@ -302,37 +427,77 @@
     </div>
   </header>
 
-  <section class="timer-card">
-    <div class="timer-row">
-      <div class="timer-fields">
-        <div class="field-line">
-          <input type="text" id="taskInput" placeholder="Чем занимаетесь?" autocomplete="off" />
+  <nav class="tabs" role="tablist">
+    <button class="tab-btn active" id="tabBtnTracker" role="tab" aria-selected="true" data-tab="tracker">Трекер</button>
+    <button class="tab-btn" id="tabBtnCalendar" role="tab" aria-selected="false" data-tab="calendar">Календарь</button>
+  </nav>
+
+  <div id="panelTracker" class="tab-panel">
+    <section class="timer-card">
+      <div class="timer-row">
+        <div class="timer-fields">
+          <div class="field-line">
+            <input type="text" id="taskInput" placeholder="Чем занимаетесь?" autocomplete="off" />
+          </div>
         </div>
+        <div class="timer-display idle mono" id="timerDisplay">00:00:00</div>
       </div>
-      <div class="timer-display idle mono" id="timerDisplay">00:00:00</div>
-    </div>
-    <div class="timer-actions">
-      <button class="btn btn-start" id="startBtn">Старт</button>
-      <button class="btn btn-pause" id="pauseBtn" disabled>Пауза</button>
-      <button class="btn btn-stop" id="stopBtn" disabled>Стоп</button>
-    </div>
-  </section>
+      <div class="timer-actions">
+        <button class="btn btn-start" id="startBtn">Старт</button>
+        <button class="btn btn-pause" id="pauseBtn" disabled>Пауза</button>
+        <button class="btn btn-stop" id="stopBtn" disabled>Стоп</button>
+      </div>
+    </section>
 
-  <section>
-    <div class="section-head">
-      <h2>Сегодня</h2>
-      <span class="meta mono" id="todayTotal">0ч 00м</span>
-    </div>
-    <div class="ledger" id="todayLedger"></div>
-  </section>
+    <section>
+      <div class="section-head">
+        <h2>Сегодня</h2>
+        <span class="meta mono" id="todayTotal">0ч 00м</span>
+      </div>
+      <div class="ledger" id="todayLedger"></div>
+    </section>
 
-  <section>
-    <div class="section-head">
-      <h2>Итоги · 7 дней</h2>
-      <span class="meta mono" id="weekTotal">0ч 00м</span>
+    <section>
+      <div class="section-head">
+        <h2>Итоги · 7 дней</h2>
+        <span class="meta mono" id="weekTotal">0ч 00м</span>
+      </div>
+      <div class="summary" id="weekSummary"></div>
+    </section>
+  </div>
+
+  <div id="panelCalendar" class="tab-panel" hidden>
+    <section class="cal-toolbar">
+      <div class="section-head" style="border-bottom:none; padding-bottom:0;">
+        <h2>Годовой календарь</h2>
+      </div>
+      <div class="year-nav">
+        <button class="btn" id="prevYearBtn" aria-label="Предыдущий год">←</button>
+        <span class="year-label mono" id="yearLabel">2026</span>
+        <button class="btn" id="nextYearBtn" aria-label="Следующий год">→</button>
+      </div>
+    </section>
+
+    <div class="cal-legend">
+      <span>Меньше</span>
+      <span class="dot heat-0"></span>
+      <span class="dot heat-1"></span>
+      <span class="dot heat-2"></span>
+      <span class="dot heat-3"></span>
+      <span class="dot heat-4"></span>
+      <span>Больше</span>
     </div>
-    <div class="summary" id="weekSummary"></div>
-  </section>
+
+    <div class="cal-grid" id="calGrid"></div>
+
+    <section class="day-detail">
+      <div class="section-head">
+        <h2 id="dayDetailTitle">Выберите день в календаре</h2>
+        <span class="meta mono" id="dayDetailTotal"></span>
+      </div>
+      <div class="ledger" id="dayDetailLedger"></div>
+    </section>
+  </div>
 
   <footer class="hint">Данные хранятся локально в этом браузере.</footer>
 </div>
@@ -379,7 +544,18 @@
     weekSummary: document.getElementById("weekSummary"),
     weekTotal: document.getElementById("weekTotal"),
     liveClock: document.getElementById("liveClock"),
-    todayDate: document.getElementById("todayDate")
+    todayDate: document.getElementById("todayDate"),
+    tabBtnTracker: document.getElementById("tabBtnTracker"),
+    tabBtnCalendar: document.getElementById("tabBtnCalendar"),
+    panelTracker: document.getElementById("panelTracker"),
+    panelCalendar: document.getElementById("panelCalendar"),
+    prevYearBtn: document.getElementById("prevYearBtn"),
+    nextYearBtn: document.getElementById("nextYearBtn"),
+    yearLabel: document.getElementById("yearLabel"),
+    calGrid: document.getElementById("calGrid"),
+    dayDetailTitle: document.getElementById("dayDetailTitle"),
+    dayDetailTotal: document.getElementById("dayDetailTotal"),
+    dayDetailLedger: document.getElementById("dayDetailLedger")
   };
 
   function fmtDuration(ms) {
@@ -489,6 +665,171 @@
     });
   }
 
+  /* ============================ Year calendar ============================ */
+
+  var MONTH_NAMES = ["январь", "февраль", "март", "апрель", "май", "июнь",
+    "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
+  var WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+  var calendarYear = new Date().getFullYear();
+  var selectedDateKey = null;
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+
+  function dateKeyOf(ts) {
+    var d = new Date(ts);
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  function heatLevel(ms) {
+    var hours = ms / 3600000;
+    if (hours <= 0) return 0;
+    if (hours < 1) return 1;
+    if (hours < 3) return 2;
+    if (hours < 6) return 3;
+    return 4;
+  }
+
+  // Groups every entry by local calendar day: { "2026-08-08": { totalMs, entries: [...] } }
+  function buildDayTotals() {
+    var byDay = {};
+    entries.forEach(function (e) {
+      var key = dateKeyOf(e.start);
+      if (!byDay[key]) byDay[key] = { totalMs: 0, entries: [] };
+      byDay[key].totalMs += entryDuration(e);
+      byDay[key].entries.push(e);
+    });
+    return byDay;
+  }
+
+  function renderCalendar() {
+    els.yearLabel.textContent = calendarYear;
+    var byDay = buildDayTotals();
+    var todayKey = dateKeyOf(Date.now());
+
+    els.calGrid.innerHTML = "";
+    for (var month = 0; month < 12; month++) {
+      var firstWeekday = (new Date(calendarYear, month, 1).getDay() + 6) % 7; // Monday = 0
+      var daysInMonth = new Date(calendarYear, month + 1, 0).getDate();
+
+      var card = document.createElement("div");
+      card.className = "month-card";
+
+      var heading = document.createElement("h3");
+      heading.textContent = MONTH_NAMES[month];
+      card.appendChild(heading);
+
+      var weekdaysRow = document.createElement("div");
+      weekdaysRow.className = "month-weekdays";
+      WEEKDAY_LABELS.forEach(function (w) {
+        var s = document.createElement("span");
+        s.textContent = w;
+        weekdaysRow.appendChild(s);
+      });
+      card.appendChild(weekdaysRow);
+
+      var daysGrid = document.createElement("div");
+      daysGrid.className = "month-days";
+
+      for (var i = 0; i < firstWeekday; i++) {
+        var blank = document.createElement("span");
+        blank.className = "day-cell blank";
+        daysGrid.appendChild(blank);
+      }
+
+      for (var day = 1; day <= daysInMonth; day++) {
+        var key = calendarYear + "-" + pad2(month + 1) + "-" + pad2(day);
+        var info = byDay[key];
+        var level = info ? heatLevel(info.totalMs) : 0;
+        var isFuture = key > todayKey;
+
+        var cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "day-cell heat-" + level;
+        if (isFuture) cell.className += " future";
+        if (key === todayKey) cell.className += " is-today";
+        if (key === selectedDateKey) cell.className += " selected";
+        cell.textContent = day;
+        cell.setAttribute("data-date", key);
+        if (info) cell.title = fmtHoursShort(info.totalMs);
+        daysGrid.appendChild(cell);
+      }
+
+      card.appendChild(daysGrid);
+      els.calGrid.appendChild(card);
+    }
+  }
+
+  function formatDayTitle(key) {
+    var parts = key.split("-").map(Number);
+    var d = new Date(parts[0], parts[1] - 1, parts[2]);
+    return d.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric", weekday: "long" });
+  }
+
+  function renderDayDetail(key) {
+    selectedDateKey = key;
+    var byDay = buildDayTotals();
+    var info = byDay[key] || { totalMs: 0, entries: [] };
+
+    els.dayDetailTitle.textContent = formatDayTitle(key);
+    els.dayDetailTotal.textContent = fmtHoursShort(info.totalMs);
+
+    var sorted = info.entries.slice().sort(function (a, b) { return b.start - a.start; });
+    els.dayDetailLedger.innerHTML = "";
+    if (sorted.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "Нет записей за этот день.";
+      els.dayDetailLedger.appendChild(empty);
+      return;
+    }
+    sorted.forEach(function (e) {
+      var row = document.createElement("div");
+      row.className = "entry";
+      row.innerHTML =
+        '<span class="dot" style="background:' + colorForTask(e.task) + '"></span>' +
+        '<span class="task">' + escapeHtml(e.task || "Без названия") + '</span>' +
+        '<span class="range mono">' + fmtTimeOfDay(e.start) + '–' + fmtTimeOfDay(e.end) + '</span>' +
+        '<span class="dur mono">' + fmtHoursShort(entryDuration(e)) + '</span>' +
+        '<button class="del" title="Удалить" data-id="' + e.id + '">✕</button>';
+      els.dayDetailLedger.appendChild(row);
+    });
+
+    // Refresh the calendar's selection outline without a full rebuild.
+    els.calGrid.querySelectorAll(".day-cell.selected").forEach(function (el) { el.classList.remove("selected"); });
+    var cell = els.calGrid.querySelector('.day-cell[data-date="' + key + '"]');
+    if (cell) cell.classList.add("selected");
+  }
+
+  els.calGrid.addEventListener("click", function (ev) {
+    var cell = ev.target.closest(".day-cell");
+    if (!cell || cell.classList.contains("blank")) return;
+    renderDayDetail(cell.getAttribute("data-date"));
+  });
+
+  els.prevYearBtn.addEventListener("click", function () {
+    calendarYear -= 1;
+    renderCalendar();
+  });
+  els.nextYearBtn.addEventListener("click", function () {
+    calendarYear += 1;
+    renderCalendar();
+  });
+
+  function switchTab(tab) {
+    var showCalendar = tab === "calendar";
+    els.panelTracker.hidden = showCalendar;
+    els.panelCalendar.hidden = !showCalendar;
+    els.tabBtnTracker.classList.toggle("active", !showCalendar);
+    els.tabBtnCalendar.classList.toggle("active", showCalendar);
+    els.tabBtnTracker.setAttribute("aria-selected", String(!showCalendar));
+    els.tabBtnCalendar.setAttribute("aria-selected", String(showCalendar));
+    if (showCalendar && !els.calGrid.childElementCount) renderCalendar();
+  }
+
+  els.tabBtnTracker.addEventListener("click", function () { switchTab("tracker"); });
+  els.tabBtnCalendar.addEventListener("click", function () { switchTab("calendar"); });
+
   var tickHandle = null;
 
   function elapsedMs() {
@@ -576,8 +917,7 @@
     localStorage.removeItem(STATE_KEY);
     els.taskInput.value = "";
     renderTimer();
-    renderTodayLedger();
-    renderWeekSummary();
+    afterEntriesChanged();
   });
 
   var pendingDeleteId = null;
@@ -588,7 +928,17 @@
     if (pendingDeleteTimer) { clearTimeout(pendingDeleteTimer); pendingDeleteTimer = null; }
   }
 
-  els.todayLedger.addEventListener("click", function (ev) {
+  // Deleting an entry can affect the today ledger, the week summary and the
+  // year calendar (heat + open day detail) all at once — refresh whichever
+  // of those exist right now.
+  function afterEntriesChanged() {
+    renderTodayLedger();
+    renderWeekSummary();
+    if (els.calGrid.childElementCount) renderCalendar();
+    if (selectedDateKey) renderDayDetail(selectedDateKey);
+  }
+
+  function handleLedgerDeleteClick(ev, onArmedReset) {
     var btn = ev.target.closest(".del");
     if (!btn) return;
     var id = btn.getAttribute("data-id");
@@ -602,7 +952,7 @@
       btn.title = "Нажмите ещё раз, чтобы удалить";
       pendingDeleteTimer = setTimeout(function () {
         resetPendingDelete();
-        renderTodayLedger();
+        onArmedReset();
       }, 3000);
       return;
     }
@@ -611,8 +961,15 @@
     resetPendingDelete();
     entries = entries.filter(function (e) { return e.id !== id; });
     save(STORAGE_KEY, entries);
-    renderTodayLedger();
-    renderWeekSummary();
+    afterEntriesChanged();
+  }
+
+  els.todayLedger.addEventListener("click", function (ev) {
+    handleLedgerDeleteClick(ev, renderTodayLedger);
+  });
+
+  els.dayDetailLedger.addEventListener("click", function (ev) {
+    handleLedgerDeleteClick(ev, function () { renderDayDetail(selectedDateKey); });
   });
 
   els.taskInput.addEventListener("keydown", function (ev) {
