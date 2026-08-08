@@ -541,6 +541,10 @@
      use one fewer column than the tracker's today-ledger rows. */
   .day-detail .entry { grid-template-columns: 10px 1fr auto auto; }
   .session-count { font-size: 12px; color: var(--muted); }
+  /* Year roll-up under the Dec 31 detail: same rule as every other section
+     head, just spaced away from the day's own rows above it. */
+  .year-summary-head { margin-top: 28px; }
+  .year-summary-row { grid-template-columns: 10px 1fr auto; }
 
   @media (max-width: 560px) {
     .timer-row { grid-template-columns: 1fr; }
@@ -1031,6 +1035,44 @@
       .sort(function (a, b) { return b.totalMs - a.totalMs; });
   }
 
+  // Read-only year roll-up shown under the Dec 31 detail. No delete buttons
+  // here — removing a year's worth of work from a summary row would be far
+  // too easy to do by accident.
+  function appendYearSummary(year) {
+    var yearEntries = entries.filter(function (e) {
+      return dateKeyOf(e.start).slice(0, 4) === year;
+    });
+    var groups = groupEntriesByTask(yearEntries);
+    var total = yearEntries.reduce(function (sum, e) { return sum + entryDuration(e); }, 0);
+
+    var head = document.createElement("div");
+    head.className = "section-head year-summary-head";
+    head.innerHTML =
+      '<h2>Итоги за ' + escapeHtml(year) + ' год</h2>' +
+      '<span class="meta mono">' + fmtHoursShort(total) + '</span>';
+    els.dayDetailLedger.appendChild(head);
+
+    if (groups.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "За этот год записей нет.";
+      els.dayDetailLedger.appendChild(empty);
+      return;
+    }
+
+    groups.forEach(function (g) {
+      var row = document.createElement("div");
+      row.className = "entry year-summary-row";
+      row.innerHTML =
+        '<span class="dot" style="background:' + colorForTask(g.name) + '"></span>' +
+        '<span class="task">' + escapeHtml(g.name) +
+          (g.ids.length > 1 ? ' <span class="session-count">× ' + g.ids.length + '</span>' : '') +
+        '</span>' +
+        '<span class="dur mono">' + fmtHoursShort(g.totalMs) + '</span>';
+      els.dayDetailLedger.appendChild(row);
+    });
+  }
+
   function renderDayDetail(key) {
     selectedDateKey = key;
     var byDay = buildDayTotals();
@@ -1046,20 +1088,24 @@
       empty.className = "empty";
       empty.textContent = "Нет записей за этот день.";
       els.dayDetailLedger.appendChild(empty);
-      return;
+    } else {
+      groups.forEach(function (g) {
+        var row = document.createElement("div");
+        row.className = "entry";
+        row.innerHTML =
+          '<span class="dot" style="background:' + colorForTask(g.name) + '"></span>' +
+          '<span class="task">' + escapeHtml(g.name) +
+            (g.ids.length > 1 ? ' <span class="session-count">× ' + g.ids.length + '</span>' : '') +
+          '</span>' +
+          '<span class="dur mono">' + fmtHoursShort(g.totalMs) + '</span>' +
+          '<button class="del" title="Удалить" data-ids="' + g.ids.join(",") + '">✕</button>';
+        els.dayDetailLedger.appendChild(row);
+      });
     }
-    groups.forEach(function (g) {
-      var row = document.createElement("div");
-      row.className = "entry";
-      row.innerHTML =
-        '<span class="dot" style="background:' + colorForTask(g.name) + '"></span>' +
-        '<span class="task">' + escapeHtml(g.name) +
-          (g.ids.length > 1 ? ' <span class="session-count">× ' + g.ids.length + '</span>' : '') +
-        '</span>' +
-        '<span class="dur mono">' + fmtHoursShort(g.totalMs) + '</span>' +
-        '<button class="del" title="Удалить" data-ids="' + g.ids.join(",") + '">✕</button>';
-      els.dayDetailLedger.appendChild(row);
-    });
+
+    // Dec 31 doubles as the year's closing page: below the day's own sessions
+    // it also totals every task tracked across that whole year.
+    if (key.slice(5) === "12-31") appendYearSummary(key.slice(0, 4));
 
     // Refresh the calendar's selection outline without a full rebuild.
     els.calGrid.querySelectorAll(".day-cell.selected").forEach(function (el) { el.classList.remove("selected"); });
