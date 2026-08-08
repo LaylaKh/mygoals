@@ -312,7 +312,9 @@
   .timer-display.idle { color: var(--faint); }
   .timer-display.running { color: var(--accent); }
 
-  .timer-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  /* Left-aligned so the controls sit directly under the task field, where the
+     cursor already is. */
+  .timer-actions { display: flex; justify-content: flex-start; gap: 10px; }
   .btn {
     border: 1px solid var(--line);
     background: var(--surface-2);
@@ -667,7 +669,6 @@
   @media (max-width: 560px) {
     .timer-row { grid-template-columns: 1fr; }
     .timer-display { text-align: left; font-size: 38px; }
-    .timer-actions { justify-content: flex-start; }
     .entry { grid-template-columns: 8px 1fr auto; row-gap: 4px; }
     .entry .range { grid-column: 2 / 3; }
     .entry .del { justify-self: end; }
