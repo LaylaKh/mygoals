@@ -68,6 +68,9 @@
   }
 
   * { box-sizing: border-box; }
+  /* Any element given `display` needs this, or the hidden attribute loses
+     the cascade and the element stays on screen. */
+  [hidden] { display: none !important; }
   html, body { margin: 0; padding: 0; }
   body {
     background: var(--bg);
