@@ -485,9 +485,25 @@
     gap: 12px;
     flex-wrap: wrap;
   }
-  .year-nav { display: flex; align-items: center; gap: 12px; }
-  .year-nav .btn { padding: 6px 12px; font-size: 14px; }
-  .year-label { font-size: 18px; min-width: 4.5em; text-align: center; }
+  .year-nav { display: flex; align-items: center; gap: 6px; }
+  .nav-btn {
+    padding: 0;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    line-height: 1;
+    border: none;
+  }
+  .year-label {
+    font-size: 17px;
+    min-width: 8.5em;
+    text-align: center;
+    text-transform: capitalize;
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  }
 
   .cal-legend {
     display: flex;
@@ -505,33 +521,44 @@
   .cal-legend .dot.goal-met { background: var(--good); }
   .cal-legend-sep { width: 1px; height: 12px; background: var(--line); margin: 0 4px; }
 
+  /* One month at a time. Swiping or the arrows move through the year, so the
+     calendar stays one screen tall instead of twelve stacked cards. */
   .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 16px;
+    display: block;
+    touch-action: pan-y;
   }
   .month-card {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 10px;
     box-shadow: var(--shadow);
-    padding: 14px 14px 16px;
+    padding: 18px 18px 20px;
+    max-width: 460px;
+    margin: 0 auto;
   }
-  .month-card h3 {
-    font-size: 14px;
-    margin-bottom: 10px;
-    text-transform: capitalize;
+  /* A short slide in the direction of travel, so a swipe feels like paging. */
+  .month-card.slide-left { animation: slide-from-left 0.18s ease-out; }
+  .month-card.slide-right { animation: slide-from-right 0.18s ease-out; }
+  @keyframes slide-from-left {
+    from { opacity: 0; transform: translateX(-14px); }
+    to { opacity: 1; transform: none; }
   }
+  @keyframes slide-from-right {
+    from { opacity: 0; transform: translateX(14px); }
+    to { opacity: 1; transform: none; }
+  }
+  /* The toolbar already names the month; the card doesn't repeat it. */
+  .month-card h3 { display: none; }
   .month-weekdays, .month-days {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 3px;
+    gap: 6px;
   }
   .month-weekdays {
     margin-bottom: 4px;
   }
   .month-weekdays span {
-    font-size: 9px;
+    font-size: 11px;
     text-transform: uppercase;
     color: var(--faint);
     text-align: center;
@@ -539,10 +566,10 @@
   .day-cell {
     aspect-ratio: 1;
     border: none;
-    border-radius: 3px;
+    border-radius: 5px;
     background: var(--heat-0);
     color: var(--muted);
-    font-size: 10px;
+    font-size: 14px;
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
     font-variant-numeric: tabular-nums;
     cursor: pointer;
@@ -738,7 +765,6 @@
   /* ---- Tablet ---- */
   @media (max-width: 860px) {
     .motto { font-size: 14px; }
-    .cal-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
   }
 
   /* ---- Phone ---- */
@@ -783,15 +809,19 @@
     .goal-edit-controls .btn { flex: 1 1 calc(50% - 5px); min-height: 40px; }
 
     .cal-toolbar { gap: 10px; }
-    .cal-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-    .month-card { padding: 12px 10px 14px; }
+    .cal-toolbar .section-head { flex: 1 1 100%; }
+    .year-nav { width: 100%; justify-content: space-between; }
+    .year-label { flex: 1 1 auto; font-size: 16px; }
+    .month-card { padding: 14px 12px 16px; max-width: none; }
+    .month-weekdays, .month-days { gap: 5px; }
     .cal-legend { flex-wrap: wrap; row-gap: 6px; }
   }
 
   /* ---- Small phone ---- */
   @media (max-width: 380px) {
-    .cal-grid { grid-template-columns: 1fr; }
     .tab-btn + .tab-btn { margin-left: 12px; }
+    .day-cell { font-size: 13px; }
+    .month-weekdays, .month-days { gap: 4px; }
     .summary-row, .entry, .goal-item { font-size: 14px; }
   }
 </style>
@@ -890,12 +920,14 @@
   <div id="panelCalendar" class="tab-panel" hidden>
     <section class="cal-toolbar">
       <div class="section-head" style="border-bottom:none; padding-bottom:0;">
-        <h2>Годовой календарь</h2>
+        <h2>Календарь</h2>
       </div>
       <div class="year-nav">
-        <button class="btn" id="prevYearBtn" aria-label="Предыдущий год">←</button>
-        <span class="year-label mono" id="yearLabel">2026</span>
-        <button class="btn" id="nextYearBtn" aria-label="Следующий год">→</button>
+        <button class="btn nav-btn" id="prevYearBtn" aria-label="Предыдущий год" title="Предыдущий год">‹‹</button>
+        <button class="btn nav-btn" id="prevMonthBtn" aria-label="Предыдущий месяц" title="Предыдущий месяц">‹</button>
+        <span class="year-label" id="monthLabel">август 2026</span>
+        <button class="btn nav-btn" id="nextMonthBtn" aria-label="Следующий месяц" title="Следующий месяц">›</button>
+        <button class="btn nav-btn" id="nextYearBtn" aria-label="Следующий год" title="Следующий год">››</button>
       </div>
     </section>
 
@@ -1065,7 +1097,9 @@
     goalsCount: document.getElementById("goalsCount"),
     prevYearBtn: document.getElementById("prevYearBtn"),
     nextYearBtn: document.getElementById("nextYearBtn"),
-    yearLabel: document.getElementById("yearLabel"),
+    monthLabel: document.getElementById("monthLabel"),
+    prevMonthBtn: document.getElementById("prevMonthBtn"),
+    nextMonthBtn: document.getElementById("nextMonthBtn"),
     calGrid: document.getElementById("calGrid"),
     dayDetailTitle: document.getElementById("dayDetailTitle"),
     dayDetailTotal: document.getElementById("dayDetailTotal"),
@@ -1194,6 +1228,7 @@
   var WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
   var calendarYear = new Date().getFullYear();
+  var calendarMonth = new Date().getMonth();
   var selectedDateKey = null;
 
   function pad2(n) { return String(n).padStart(2, "0"); }
@@ -1233,61 +1268,69 @@
     return byDay;
   }
 
-  function renderCalendar() {
-    els.yearLabel.textContent = calendarYear;
+  // Renders the single month currently in view. `direction` is -1, 0 or 1 and
+  // only drives the slide animation.
+  function renderCalendar(direction) {
+    els.monthLabel.textContent = MONTH_NAMES[calendarMonth] + " " + calendarYear;
     var byDay = buildDayTotals();
     var todayKey = dateKeyOf(Date.now());
 
-    els.calGrid.innerHTML = "";
-    for (var month = 0; month < 12; month++) {
-      var firstWeekday = (new Date(calendarYear, month, 1).getDay() + 6) % 7; // Monday = 0
-      var daysInMonth = new Date(calendarYear, month + 1, 0).getDate();
+    var firstWeekday = (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7; // Monday = 0
+    var daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
 
-      var card = document.createElement("div");
-      card.className = "month-card";
+    var card = document.createElement("div");
+    card.className = "month-card";
+    if (direction === 1) card.className += " slide-right";
+    else if (direction === -1) card.className += " slide-left";
 
-      var heading = document.createElement("h3");
-      heading.textContent = MONTH_NAMES[month];
-      card.appendChild(heading);
+    var heading = document.createElement("h3");
+    heading.textContent = MONTH_NAMES[calendarMonth];
+    card.appendChild(heading);
 
-      var weekdaysRow = document.createElement("div");
-      weekdaysRow.className = "month-weekdays";
-      WEEKDAY_LABELS.forEach(function (w) {
-        var s = document.createElement("span");
-        s.textContent = w;
-        weekdaysRow.appendChild(s);
-      });
-      card.appendChild(weekdaysRow);
+    var weekdaysRow = document.createElement("div");
+    weekdaysRow.className = "month-weekdays";
+    WEEKDAY_LABELS.forEach(function (w) {
+      var s = document.createElement("span");
+      s.textContent = w;
+      weekdaysRow.appendChild(s);
+    });
+    card.appendChild(weekdaysRow);
 
-      var daysGrid = document.createElement("div");
-      daysGrid.className = "month-days";
+    var daysGrid = document.createElement("div");
+    daysGrid.className = "month-days";
 
-      for (var i = 0; i < firstWeekday; i++) {
-        var blank = document.createElement("span");
-        blank.className = "day-cell blank";
-        daysGrid.appendChild(blank);
-      }
-
-      for (var day = 1; day <= daysInMonth; day++) {
-        var key = calendarYear + "-" + pad2(month + 1) + "-" + pad2(day);
-        var info = byDay[key];
-        var isFuture = key > todayKey;
-
-        var cell = document.createElement("button");
-        cell.type = "button";
-        cell.className = "day-cell " + dayColorClass(info ? info.totalMs : 0);
-        if (isFuture) cell.className += " future";
-        if (key === todayKey) cell.className += " is-today";
-        if (key === selectedDateKey) cell.className += " selected";
-        cell.textContent = day;
-        cell.setAttribute("data-date", key);
-        if (info) cell.title = fmtHoursShort(info.totalMs);
-        daysGrid.appendChild(cell);
-      }
-
-      card.appendChild(daysGrid);
-      els.calGrid.appendChild(card);
+    for (var i = 0; i < firstWeekday; i++) {
+      var blank = document.createElement("span");
+      blank.className = "day-cell blank";
+      daysGrid.appendChild(blank);
     }
+
+    for (var day = 1; day <= daysInMonth; day++) {
+      var key = calendarYear + "-" + pad2(calendarMonth + 1) + "-" + pad2(day);
+      var info = byDay[key];
+
+      var cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "day-cell " + dayColorClass(info ? info.totalMs : 0);
+      if (key > todayKey) cell.className += " future";
+      if (key === todayKey) cell.className += " is-today";
+      if (key === selectedDateKey) cell.className += " selected";
+      cell.textContent = day;
+      cell.setAttribute("data-date", key);
+      if (info) cell.title = fmtHoursShort(info.totalMs);
+      daysGrid.appendChild(cell);
+    }
+
+    card.appendChild(daysGrid);
+    els.calGrid.innerHTML = "";
+    els.calGrid.appendChild(card);
+  }
+
+  function shiftMonth(delta) {
+    var index = calendarYear * 12 + calendarMonth + delta;
+    calendarYear = Math.floor(index / 12);
+    calendarMonth = index - calendarYear * 12;
+    renderCalendar(delta > 0 ? 1 : -1);
   }
 
   function formatDayTitle(key) {
@@ -1396,13 +1439,36 @@
     renderDayDetail(cell.getAttribute("data-date"));
   });
 
-  els.prevYearBtn.addEventListener("click", function () {
-    calendarYear -= 1;
-    renderCalendar();
-  });
-  els.nextYearBtn.addEventListener("click", function () {
-    calendarYear += 1;
-    renderCalendar();
+  els.prevMonthBtn.addEventListener("click", function () { shiftMonth(-1); });
+  els.nextMonthBtn.addEventListener("click", function () { shiftMonth(1); });
+  els.prevYearBtn.addEventListener("click", function () { shiftMonth(-12); });
+  els.nextYearBtn.addEventListener("click", function () { shiftMonth(12); });
+
+  // Horizontal swipe pages between months; a mostly-vertical drag is left
+  // alone so the page can still scroll.
+  var swipeStartX = null;
+  var swipeStartY = null;
+
+  els.calGrid.addEventListener("touchstart", function (ev) {
+    if (ev.touches.length !== 1) { swipeStartX = null; return; }
+    swipeStartX = ev.touches[0].clientX;
+    swipeStartY = ev.touches[0].clientY;
+  }, { passive: true });
+
+  els.calGrid.addEventListener("touchend", function (ev) {
+    if (swipeStartX === null) return;
+    var touch = ev.changedTouches[0];
+    var dx = touch.clientX - swipeStartX;
+    var dy = touch.clientY - swipeStartY;
+    swipeStartX = null;
+    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy)) return;
+    shiftMonth(dx < 0 ? 1 : -1);
+  }, { passive: true });
+
+  // Arrow keys page months when the calendar itself has focus.
+  els.calGrid.addEventListener("keydown", function (ev) {
+    if (ev.key === "ArrowLeft") { shiftMonth(-1); ev.preventDefault(); }
+    else if (ev.key === "ArrowRight") { shiftMonth(1); ev.preventDefault(); }
   });
 
   /* ================================ Goals ================================ */
