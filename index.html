@@ -99,7 +99,9 @@
   button { font: inherit; }
   input, select { font: inherit; color: inherit; }
   ::selection { background: var(--accent-soft); }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* Keyboard focus stays marked, but in a quiet neutral rather than the amber
+     accent, which read as an unwanted glow around every control. */
+  :focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
 
   .wrap {
