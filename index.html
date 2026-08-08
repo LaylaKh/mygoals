@@ -551,6 +551,58 @@
   .year-summary-head { margin-top: 28px; }
   .year-summary-row { grid-template-columns: 10px 1fr auto; }
 
+  /* ---- Goals ---- */
+  .goal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-top: 14px;
+  }
+  .goal-form-range { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .goal-form select {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 14px;
+  }
+  .goal-dash { color: var(--faint); }
+  .goal-form .btn { margin-left: auto; }
+
+  .goal-list { display: flex; flex-direction: column; padding-top: 14px; }
+  .goal-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .goal-item:last-child { border-bottom: none; }
+  .goal-item .goal-name { font-size: 15px; }
+  .goal-item .goal-range {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 3px;
+    text-transform: capitalize;
+  }
+  .goal-status {
+    font-size: 13px;
+    white-space: nowrap;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--muted);
+  }
+  .goal-status.active { background: var(--accent-soft); color: var(--accent); }
+  .goal-status.done { background: var(--accent-soft); color: var(--good); }
+
   @media (max-width: 560px) {
     .timer-row { grid-template-columns: 1fr; }
     .timer-display { text-align: left; font-size: 38px; }
@@ -695,8 +747,21 @@
     <section>
       <div class="section-head">
         <h2>Цели</h2>
+        <span class="meta mono" id="goalsCount"></span>
       </div>
-      <div class="empty">Здесь появятся цели по часам — например, «Java: 10 часов в неделю».</div>
+
+      <div class="goal-form">
+        <input type="text" id="goalNameInput" placeholder="Например: выучить Java" autocomplete="off" />
+        <div class="goal-form-range">
+          <select id="goalStartMonth" aria-label="Месяц начала"></select>
+          <span class="goal-dash">—</span>
+          <select id="goalEndMonth" aria-label="Месяц окончания"></select>
+          <select id="goalYear" aria-label="Год"></select>
+          <button class="btn btn-start" id="addGoalBtn" type="button">Добавить</button>
+        </div>
+      </div>
+
+      <div class="goal-list" id="goalList"></div>
     </section>
   </div>
 
@@ -750,6 +815,7 @@
 
   var THEME_KEY = "tt_theme_v1";
   var STORAGE_KEY = "tt_entries_v1";
+  var GOALS_KEY = "tt_goals_v1";
   var STATE_KEY = "tt_running_v1";
 
   // A small fixed palette; a task's color is derived deterministically from its name
@@ -775,6 +841,8 @@
   // running: { task, firstStartedAt, segmentStartedAt, accumulated, paused }
   // segmentStartedAt is null while paused; accumulated holds ms from finished segments.
   var running = load(STATE_KEY, null);
+  // goals: [{ id, name, year, startMonth, endMonth }] — months are 0-based.
+  var goals = load(GOALS_KEY, []);
 
   // Cloud sync state. localStorage stays as an offline cache; Firestore
   // (one document per signed-in user, under users/{uid}) is the source of
@@ -802,6 +870,13 @@
     panelCalendar: document.getElementById("panelCalendar"),
     tabBtnGoals: document.getElementById("tabBtnGoals"),
     panelGoals: document.getElementById("panelGoals"),
+    goalNameInput: document.getElementById("goalNameInput"),
+    goalStartMonth: document.getElementById("goalStartMonth"),
+    goalEndMonth: document.getElementById("goalEndMonth"),
+    goalYear: document.getElementById("goalYear"),
+    addGoalBtn: document.getElementById("addGoalBtn"),
+    goalList: document.getElementById("goalList"),
+    goalsCount: document.getElementById("goalsCount"),
     prevYearBtn: document.getElementById("prevYearBtn"),
     nextYearBtn: document.getElementById("nextYearBtn"),
     yearLabel: document.getElementById("yearLabel"),
@@ -1144,6 +1219,153 @@
     renderCalendar();
   });
 
+  /* ================================ Goals ================================ */
+
+  function persistGoals() {
+    save(GOALS_KEY, goals);
+    if (fb && currentUser && docRef && !applyingRemote) {
+      fb.setDoc(docRef, { goals: goals, updatedAt: Date.now() }, { merge: true })
+        .catch(function (err) { console.error("Cloud sync failed", err); });
+    }
+  }
+
+  function fillGoalForm() {
+    var thisYear = new Date().getFullYear();
+    var thisMonth = new Date().getMonth();
+
+    MONTH_NAMES.forEach(function (name, i) {
+      [els.goalStartMonth, els.goalEndMonth].forEach(function (sel) {
+        var opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+    });
+    els.goalStartMonth.value = thisMonth;
+    els.goalEndMonth.value = Math.min(thisMonth + 2, 11);
+
+    for (var y = thisYear; y <= thisYear + 2; y++) {
+      var opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      els.goalYear.appendChild(opt);
+    }
+    els.goalYear.value = thisYear;
+  }
+
+  // How far the goal's end month is from the current month. The month you're
+  // in counts as one, so a goal ending this month reads "осталось 1 месяц".
+  function goalStatus(goal) {
+    var now = new Date();
+    var nowIndex = now.getFullYear() * 12 + now.getMonth();
+    var startIndex = goal.year * 12 + goal.startMonth;
+    var endIndex = goal.year * 12 + goal.endMonth;
+
+    if (nowIndex > endIndex) return { text: "Завершена", cls: "done" };
+    if (nowIndex < startIndex) {
+      var untilStart = startIndex - nowIndex;
+      return { text: "Начнётся через " + untilStart + " " + pluralMonths(untilStart), cls: "" };
+    }
+    var left = endIndex - nowIndex + 1;
+    return { text: "Осталось: " + left + " " + pluralMonths(left), cls: "active" };
+  }
+
+  function pluralMonths(n) {
+    var mod10 = n % 10, mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return "месяц";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "месяца";
+    return "месяцев";
+  }
+
+  function renderGoals() {
+    els.goalList.innerHTML = "";
+    els.goalsCount.textContent = goals.length ? goals.length + " шт." : "";
+
+    if (goals.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "Целей пока нет — добавьте первую выше.";
+      els.goalList.appendChild(empty);
+      return;
+    }
+
+    goals.slice()
+      .sort(function (a, b) {
+        return (a.year * 12 + a.startMonth) - (b.year * 12 + b.startMonth);
+      })
+      .forEach(function (g) {
+        var status = goalStatus(g);
+        var range = MONTH_NAMES[g.startMonth] +
+          (g.startMonth === g.endMonth ? "" : " — " + MONTH_NAMES[g.endMonth]) +
+          " " + g.year;
+
+        var row = document.createElement("div");
+        row.className = "goal-item";
+        row.innerHTML =
+          '<span>' +
+            '<span class="goal-name">' + escapeHtml(g.name) + '</span>' +
+            '<span class="goal-range">' + escapeHtml(range) + '</span>' +
+          '</span>' +
+          '<span class="goal-status ' + status.cls + '">' + escapeHtml(status.text) + '</span>' +
+          '<button class="del" title="Удалить" data-goal-id="' + g.id + '">✕</button>';
+        els.goalList.appendChild(row);
+      });
+  }
+
+  els.addGoalBtn.addEventListener("click", function () {
+    var name = els.goalNameInput.value.trim();
+    if (!name) { els.goalNameInput.focus(); return; }
+
+    var startMonth = Number(els.goalStartMonth.value);
+    var endMonth = Number(els.goalEndMonth.value);
+    // A backwards range is almost certainly a slip — swap it rather than
+    // storing a goal that can never be "in progress".
+    if (endMonth < startMonth) { var t = startMonth; startMonth = endMonth; endMonth = t; }
+
+    goals.push({
+      id: String(Date.now()) + Math.random().toString(16).slice(2),
+      name: name,
+      year: Number(els.goalYear.value),
+      startMonth: startMonth,
+      endMonth: endMonth
+    });
+    persistGoals();
+    els.goalNameInput.value = "";
+    renderGoals();
+  });
+
+  els.goalNameInput.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") els.addGoalBtn.click();
+  });
+
+  var pendingGoalDeleteId = null;
+  var pendingGoalDeleteTimer = null;
+
+  els.goalList.addEventListener("click", function (ev) {
+    var btn = ev.target.closest(".del");
+    if (!btn) return;
+    var id = btn.getAttribute("data-goal-id");
+
+    if (pendingGoalDeleteId !== id) {
+      if (pendingGoalDeleteTimer) clearTimeout(pendingGoalDeleteTimer);
+      pendingGoalDeleteId = id;
+      btn.classList.add("confirm");
+      btn.textContent = "Точно?";
+      btn.title = "Нажмите ещё раз, чтобы удалить";
+      pendingGoalDeleteTimer = setTimeout(function () {
+        pendingGoalDeleteId = null;
+        renderGoals();
+      }, 3000);
+      return;
+    }
+
+    if (pendingGoalDeleteTimer) clearTimeout(pendingGoalDeleteTimer);
+    pendingGoalDeleteId = null;
+    goals = goals.filter(function (g) { return g.id !== id; });
+    persistGoals();
+    renderGoals();
+  });
+
   var TABS = [
     { name: "tracker", btn: "tabBtnTracker", panel: "panelTracker" },
     { name: "calendar", btn: "tabBtnCalendar", panel: "panelCalendar" },
@@ -1298,11 +1520,14 @@
     applyingRemote = true;
     entries = Array.isArray(data.entries) ? data.entries : [];
     running = data.running || null;
+    goals = Array.isArray(data.goals) ? data.goals : [];
     save(STORAGE_KEY, entries);
+    save(GOALS_KEY, goals);
     if (running) save(STATE_KEY, running); else localStorage.removeItem(STATE_KEY);
     els.taskInput.value = running ? (running.task || "") : "";
     renderTimer();
     afterEntriesChanged();
+    renderGoals();
     applyingRemote = false;
   }
 
@@ -1324,7 +1549,7 @@
       } else {
         // First sign-in on this account: seed the cloud document with
         // whatever is already tracked on this device, so nothing is lost.
-        fb.setDoc(docRef, { entries: entries, running: running, updatedAt: Date.now() })
+        fb.setDoc(docRef, { entries: entries, running: running, goals: goals, updatedAt: Date.now() })
           .catch(function (err) { console.error("Initial cloud sync failed", err); });
       }
     }, function (err) {
@@ -1447,6 +1672,8 @@
   renderTimer();
   renderTodayLedger();
   renderWeekSummary();
+  fillGoalForm();
+  renderGoals();
   updateClock();
   setInterval(updateClock, 1000);
   tickHandle = setInterval(tick, 1000);
