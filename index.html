@@ -640,15 +640,7 @@
   <footer class="hint">Данные привязаны к вашему Google-аккаунту и синхронизируются между устройствами.</footer>
 </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import {
-    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import {
-    getFirestore, doc, setDoc, onSnapshot
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
+<script>
   var firebaseConfig = {
     apiKey: "AIzaSyA1T_1HjcjZLb-G-yIoRrCMzYUV1oS49FQ",
     authDomain: "mygoalssite-138c8.firebaseapp.com",
@@ -658,10 +650,35 @@
     appId: "1:673449468386:web:992ec89f493087f18d19bb"
   };
 
-  var firebaseApp = initializeApp(firebaseConfig);
-  var auth = getAuth(firebaseApp);
-  var db = getFirestore(firebaseApp);
-  var googleProvider = new GoogleAuthProvider();
+  // Firebase is loaded on demand, not at startup: the tracker itself must work
+  // with no network at all, so a blocked or failed CDN can never take the page
+  // down with it. Everything below resolves once the user asks to sign in.
+  var fb = null;
+
+  function loadFirebase() {
+    if (fb) return Promise.resolve(fb);
+    var base = "https://www.gstatic.com/firebasejs/10.12.2/";
+    return Promise.all([
+      import(base + "firebase-app.js"),
+      import(base + "firebase-auth.js"),
+      import(base + "firebase-firestore.js")
+    ]).then(function (mods) {
+      var appMod = mods[0], authMod = mods[1], storeMod = mods[2];
+      var firebaseApp = appMod.initializeApp(firebaseConfig);
+      fb = {
+        auth: authMod.getAuth(firebaseApp),
+        db: storeMod.getFirestore(firebaseApp),
+        provider: new authMod.GoogleAuthProvider(),
+        signInWithPopup: authMod.signInWithPopup,
+        signOut: authMod.signOut,
+        onAuthStateChanged: authMod.onAuthStateChanged,
+        doc: storeMod.doc,
+        setDoc: storeMod.setDoc,
+        onSnapshot: storeMod.onSnapshot
+      };
+      return fb;
+    });
+  }
 
 (function () {
   "use strict";
@@ -1147,16 +1164,16 @@
   // document, which is what actually makes it show up on other devices.
   function persistEntries() {
     save(STORAGE_KEY, entries);
-    if (currentUser && docRef && !applyingRemote) {
-      setDoc(docRef, { entries: entries, updatedAt: Date.now() }, { merge: true })
+    if (fb && currentUser && docRef && !applyingRemote) {
+      fb.setDoc(docRef, { entries: entries, updatedAt: Date.now() }, { merge: true })
         .catch(function (err) { console.error("Cloud sync failed", err); });
     }
   }
 
   function persistRunning() {
     if (running) save(STATE_KEY, running); else localStorage.removeItem(STATE_KEY);
-    if (currentUser && docRef && !applyingRemote) {
-      setDoc(docRef, { running: running, updatedAt: Date.now() }, { merge: true })
+    if (fb && currentUser && docRef && !applyingRemote) {
+      fb.setDoc(docRef, { running: running, updatedAt: Date.now() }, { merge: true })
         .catch(function (err) { console.error("Cloud sync failed", err); });
     }
   }
@@ -1179,7 +1196,7 @@
   // the tabs stay usable the whole time, signed in or not.
   function startCloudSync(user) {
     currentUser = user;
-    docRef = doc(db, "users", user.uid);
+    docRef = fb.doc(fb.db, "users", user.uid);
 
     els.userAvatar.src = user.photoURL || "";
     els.userName.textContent = user.displayName || user.email || "";
@@ -1187,13 +1204,13 @@
     els.authTriggerBtn.hidden = true;
     els.authGate.hidden = true;
 
-    unsubscribeSnapshot = onSnapshot(docRef, function (snap) {
+    unsubscribeSnapshot = fb.onSnapshot(docRef, function (snap) {
       if (snap.exists()) {
         applyRemoteData(snap.data());
       } else {
         // First sign-in on this account: seed the cloud document with
         // whatever is already tracked on this device, so nothing is lost.
-        setDoc(docRef, { entries: entries, running: running, updatedAt: Date.now() })
+        fb.setDoc(docRef, { entries: entries, running: running, updatedAt: Date.now() })
           .catch(function (err) { console.error("Initial cloud sync failed", err); });
       }
     }, function (err) {
@@ -1209,10 +1226,6 @@
     els.userChip.hidden = true;
     els.authTriggerBtn.hidden = false;
   }
-
-  onAuthStateChanged(auth, function (user) {
-    if (user) startCloudSync(user); else stopCloudSync();
-  });
 
   els.authTriggerBtn.addEventListener("click", function () {
     els.authError.textContent = "";
@@ -1231,16 +1244,32 @@
     if (ev.target === els.authGate) els.authGate.hidden = true;
   });
 
+  var authListenerBound = false;
+
+  function bindAuthListener(f) {
+    if (authListenerBound) return;
+    authListenerBound = true;
+    f.onAuthStateChanged(f.auth, function (user) {
+      if (user) startCloudSync(user); else stopCloudSync();
+    });
+  }
+
+  // Firebase downloads here, on the first sign-in attempt — never at startup.
   els.googleSignInBtn.addEventListener("click", function () {
-    els.authError.textContent = "";
-    signInWithPopup(auth, googleProvider).catch(function (err) {
+    els.authError.textContent = "Подключаемся…";
+    loadFirebase().then(function (f) {
+      bindAuthListener(f);
+      return f.signInWithPopup(f.auth, f.provider);
+    }).then(function () {
+      els.authError.textContent = "";
+    }).catch(function (err) {
       console.error(err);
-      els.authError.textContent = "Не удалось войти: " + err.message;
+      els.authError.textContent = "Не удалось войти: " + (err && err.message ? err.message : err);
     });
   });
 
   els.signOutBtn.addEventListener("click", function () {
-    signOut(auth);
+    if (fb) fb.signOut(fb.auth);
   });
 
   function handleLedgerDeleteClick(ev, onArmedReset) {
@@ -1296,5 +1325,10 @@
   updateClock();
   setInterval(updateClock, 1000);
   tickHandle = setInterval(tick, 1000);
+
+  // Restore a previous sign-in quietly in the background. If Firebase can't
+  // load (offline, blocked CDN, sandboxed preview) the tracker just carries
+  // on locally — that failure must never surface as an error to the user.
+  loadFirebase().then(bindAuthListener).catch(function () { /* offline-only mode */ });
 })();
 </script>
