@@ -167,6 +167,16 @@
     padding: 10px 22px;
   }
   .auth-error { color: var(--bad); font-size: 13px; min-height: 1.2em; }
+  .auth-skip {
+    background: none;
+    border: none;
+    color: var(--faint);
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+  }
+  .auth-skip:hover { color: var(--muted); }
 
   /* ---- Timer card ---- */
   .timer-card {
@@ -504,6 +514,7 @@
         Войти через Google
       </button>
       <p class="auth-error" id="authError"></p>
+      <button class="auth-skip" id="skipAuthBtn" type="button">Продолжить без входа</button>
     </div>
   </div>
 
@@ -675,6 +686,7 @@
     authGate: document.getElementById("authGate"),
     appContent: document.getElementById("appContent"),
     googleSignInBtn: document.getElementById("googleSignInBtn"),
+    skipAuthBtn: document.getElementById("skipAuthBtn"),
     authError: document.getElementById("authError"),
     userChip: document.getElementById("userChip"),
     userAvatar: document.getElementById("userAvatar"),
@@ -1168,6 +1180,15 @@
 
   els.signOutBtn.addEventListener("click", function () {
     signOut(auth);
+  });
+
+  // Escape hatch for environments where Google sign-in can't run (e.g. this
+  // page embedded in a sandboxed preview) — use the tracker locally, same as
+  // before cloud sync existed. Nothing is lost: signing in later adopts
+  // whatever is already saved on this device.
+  els.skipAuthBtn.addEventListener("click", function () {
+    els.authGate.hidden = true;
+    els.appContent.hidden = false;
   });
 
   function handleLedgerDeleteClick(ev, onArmedReset) {
