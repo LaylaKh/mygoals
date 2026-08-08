@@ -230,6 +230,13 @@
     padding: 4px;
   }
   .entry .del:hover { color: var(--bad); }
+  .entry .del.confirm {
+    color: var(--bad);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
   .empty {
     color: var(--faint);
     font-size: 14px;
@@ -409,6 +416,7 @@
   }
 
   function renderTodayLedger() {
+    resetPendingDelete();
     var todayStart = startOfDay(Date.now());
     var todays = entries.filter(function (e) { return e.start >= todayStart; })
       .sort(function (a, b) { return b.start - a.start; });
@@ -572,10 +580,35 @@
     renderWeekSummary();
   });
 
+  var pendingDeleteId = null;
+  var pendingDeleteTimer = null;
+
+  function resetPendingDelete() {
+    pendingDeleteId = null;
+    if (pendingDeleteTimer) { clearTimeout(pendingDeleteTimer); pendingDeleteTimer = null; }
+  }
+
   els.todayLedger.addEventListener("click", function (ev) {
     var btn = ev.target.closest(".del");
     if (!btn) return;
     var id = btn.getAttribute("data-id");
+
+    if (pendingDeleteId !== id) {
+      // First click: arm the confirmation instead of deleting right away.
+      resetPendingDelete();
+      pendingDeleteId = id;
+      btn.classList.add("confirm");
+      btn.textContent = "Точно?";
+      btn.title = "Нажмите ещё раз, чтобы удалить";
+      pendingDeleteTimer = setTimeout(function () {
+        resetPendingDelete();
+        renderTodayLedger();
+      }, 3000);
+      return;
+    }
+
+    // Second click on the same row within the window: actually delete.
+    resetPendingDelete();
     entries = entries.filter(function (e) { return e.id !== id; });
     save(STORAGE_KEY, entries);
     renderTodayLedger();
