@@ -189,6 +189,16 @@
     line-height: 1;
   }
   .auth-close:hover { color: var(--ink); }
+  .auth-skip {
+    background: none;
+    border: none;
+    color: var(--faint);
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+  }
+  .auth-skip:hover { color: var(--muted); }
   .auth-card h2 { font-size: 20px; }
   .auth-card p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0; }
   .btn-google {
@@ -542,6 +552,7 @@
         Войти через Google
       </button>
       <p class="auth-error" id="authError"></p>
+      <button class="auth-skip" id="skipAuthBtn" type="button">Продолжить без входа</button>
     </div>
   </div>
 
@@ -715,6 +726,7 @@
     googleSignInBtn: document.getElementById("googleSignInBtn"),
     authTriggerBtn: document.getElementById("authTriggerBtn"),
     authCloseBtn: document.getElementById("authCloseBtn"),
+    skipAuthBtn: document.getElementById("skipAuthBtn"),
     authError: document.getElementById("authError"),
     userChip: document.getElementById("userChip"),
     userAvatar: document.getElementById("userAvatar"),
@@ -1205,6 +1217,10 @@
   });
 
   els.authCloseBtn.addEventListener("click", function () {
+    els.authGate.hidden = true;
+  });
+
+  els.skipAuthBtn.addEventListener("click", function () {
     els.authGate.hidden = true;
   });
 
