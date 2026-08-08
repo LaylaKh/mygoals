@@ -402,6 +402,10 @@
   :root[data-theme="dark"] .day-cell:not(.blank):not(.future):hover { filter: brightness(1.25); }
 
   .day-detail { display: flex; flex-direction: column; gap: 12px; }
+  /* Day-detail rows are grouped by task (no per-session time range), so they
+     use one fewer column than the tracker's today-ledger rows. */
+  .day-detail .entry { grid-template-columns: 10px 1fr auto auto; }
+  .session-count { font-size: 12px; color: var(--muted); }
 
   @media (max-width: 560px) {
     .timer-row { grid-template-columns: 1fr; }
@@ -767,6 +771,22 @@
     return d.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric", weekday: "long" });
   }
 
+  // Same task tracked in several sessions on the same day collapses into one
+  // row here, with the durations summed — the calendar shows totals per
+  // task, not a session-by-session log (that's what the tracker tab is for).
+  function groupEntriesByTask(list) {
+    var byTask = {};
+    var order = [];
+    list.forEach(function (e) {
+      var name = e.task || "Без названия";
+      if (!byTask[name]) { byTask[name] = { name: name, totalMs: 0, ids: [] }; order.push(name); }
+      byTask[name].totalMs += entryDuration(e);
+      byTask[name].ids.push(e.id);
+    });
+    return order.map(function (name) { return byTask[name]; })
+      .sort(function (a, b) { return b.totalMs - a.totalMs; });
+  }
+
   function renderDayDetail(key) {
     selectedDateKey = key;
     var byDay = buildDayTotals();
@@ -775,24 +795,25 @@
     els.dayDetailTitle.textContent = formatDayTitle(key);
     els.dayDetailTotal.textContent = fmtHoursShort(info.totalMs);
 
-    var sorted = info.entries.slice().sort(function (a, b) { return b.start - a.start; });
+    var groups = groupEntriesByTask(info.entries);
     els.dayDetailLedger.innerHTML = "";
-    if (sorted.length === 0) {
+    if (groups.length === 0) {
       var empty = document.createElement("div");
       empty.className = "empty";
       empty.textContent = "Нет записей за этот день.";
       els.dayDetailLedger.appendChild(empty);
       return;
     }
-    sorted.forEach(function (e) {
+    groups.forEach(function (g) {
       var row = document.createElement("div");
       row.className = "entry";
       row.innerHTML =
-        '<span class="dot" style="background:' + colorForTask(e.task) + '"></span>' +
-        '<span class="task">' + escapeHtml(e.task || "Без названия") + '</span>' +
-        '<span class="range mono">' + fmtTimeOfDay(e.start) + '–' + fmtTimeOfDay(e.end) + '</span>' +
-        '<span class="dur mono">' + fmtHoursShort(entryDuration(e)) + '</span>' +
-        '<button class="del" title="Удалить" data-id="' + e.id + '">✕</button>';
+        '<span class="dot" style="background:' + colorForTask(g.name) + '"></span>' +
+        '<span class="task">' + escapeHtml(g.name) +
+          (g.ids.length > 1 ? ' <span class="session-count">× ' + g.ids.length + '</span>' : '') +
+        '</span>' +
+        '<span class="dur mono">' + fmtHoursShort(g.totalMs) + '</span>' +
+        '<button class="del" title="Удалить" data-ids="' + g.ids.join(",") + '">✕</button>';
       els.dayDetailLedger.appendChild(row);
     });
 
@@ -942,12 +963,16 @@
   function handleLedgerDeleteClick(ev, onArmedReset) {
     var btn = ev.target.closest(".del");
     if (!btn) return;
-    var id = btn.getAttribute("data-id");
+    // Single session rows carry data-id; grouped day-detail rows (same task,
+    // several sessions in one day) carry data-ids and remove all of them together.
+    var idsAttr = btn.getAttribute("data-ids");
+    var ids = idsAttr ? idsAttr.split(",") : [btn.getAttribute("data-id")];
+    var key = ids.join(",");
 
-    if (pendingDeleteId !== id) {
+    if (pendingDeleteId !== key) {
       // First click: arm the confirmation instead of deleting right away.
       resetPendingDelete();
-      pendingDeleteId = id;
+      pendingDeleteId = key;
       btn.classList.add("confirm");
       btn.textContent = "Точно?";
       btn.title = "Нажмите ещё раз, чтобы удалить";
@@ -960,7 +985,8 @@
 
     // Second click on the same row within the window: actually delete.
     resetPendingDelete();
-    entries = entries.filter(function (e) { return e.id !== id; });
+    var idSet = ids.reduce(function (set, id) { set[id] = true; return set; }, {});
+    entries = entries.filter(function (e) { return !idSet[e.id]; });
     save(STORAGE_KEY, entries);
     afterEntriesChanged();
   }
