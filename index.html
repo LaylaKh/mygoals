@@ -138,8 +138,31 @@
   }
   .user-signout:hover { color: var(--bad); }
 
-  .auth-gate { display: flex; align-items: center; justify-content: center; padding: 64px 16px; }
+  .auth-trigger {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+  }
+  .auth-trigger:hover { color: var(--ink); }
+
+  /* Sign-in is an optional overlay, not a wall — the tracker underneath
+     stays usable while it's open, and closing it changes nothing. */
+  .auth-gate {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 15, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 100;
+  }
   .auth-card {
+    position: relative;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 10px;
@@ -153,6 +176,19 @@
     align-items: center;
     gap: 14px;
   }
+  .auth-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--faint);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+  }
+  .auth-close:hover { color: var(--ink); }
   .auth-card h2 { font-size: 20px; }
   .auth-card p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0; }
   .btn-google {
@@ -167,16 +203,6 @@
     padding: 10px 22px;
   }
   .auth-error { color: var(--bad); font-size: 13px; min-height: 1.2em; }
-  .auth-skip {
-    background: none;
-    border: none;
-    color: var(--faint);
-    font-size: 12px;
-    text-decoration: underline;
-    cursor: pointer;
-    padding: 0;
-  }
-  .auth-skip:hover { color: var(--muted); }
 
   /* ---- Timer card ---- */
   .timer-card {
@@ -497,11 +523,13 @@
         <span class="user-name" id="userName"></span>
         <button class="user-signout" id="signOutBtn" type="button">Выйти</button>
       </div>
+      <button class="auth-trigger" id="authTriggerBtn" type="button">Войти для синхронизации</button>
     </div>
   </header>
 
   <div class="auth-gate" id="authGate" hidden>
     <div class="auth-card">
+      <button class="auth-close" id="authCloseBtn" type="button" aria-label="Закрыть">✕</button>
       <h2>Вход в трекер</h2>
       <p>Войдите через Google — записи будут привязаны к вашему аккаунту и одинаковы на телефоне, компьютере и планшете, пока вы сами их не удалите.</p>
       <button class="btn btn-google" id="googleSignInBtn" type="button">
@@ -514,11 +542,10 @@
         Войти через Google
       </button>
       <p class="auth-error" id="authError"></p>
-      <button class="auth-skip" id="skipAuthBtn" type="button">Продолжить без входа</button>
     </div>
   </div>
 
-  <div id="appContent" hidden>
+  <div id="appContent">
   <nav class="tabs" role="tablist">
     <button class="tab-btn active" id="tabBtnTracker" role="tab" aria-selected="true" data-tab="tracker">Трекер</button>
     <button class="tab-btn" id="tabBtnCalendar" role="tab" aria-selected="false" data-tab="calendar">Календарь</button>
@@ -686,7 +713,8 @@
     authGate: document.getElementById("authGate"),
     appContent: document.getElementById("appContent"),
     googleSignInBtn: document.getElementById("googleSignInBtn"),
-    skipAuthBtn: document.getElementById("skipAuthBtn"),
+    authTriggerBtn: document.getElementById("authTriggerBtn"),
+    authCloseBtn: document.getElementById("authCloseBtn"),
     authError: document.getElementById("authError"),
     userChip: document.getElementById("userChip"),
     userAvatar: document.getElementById("userAvatar"),
@@ -1132,6 +1160,8 @@
     applyingRemote = false;
   }
 
+  // Signing in is an optional overlay on top of the tracker, not a wall —
+  // the tabs stay usable the whole time, signed in or not.
   function startCloudSync(user) {
     currentUser = user;
     docRef = doc(db, "users", user.uid);
@@ -1139,8 +1169,8 @@
     els.userAvatar.src = user.photoURL || "";
     els.userName.textContent = user.displayName || user.email || "";
     els.userChip.hidden = false;
+    els.authTriggerBtn.hidden = true;
     els.authGate.hidden = true;
-    els.appContent.hidden = false;
 
     unsubscribeSnapshot = onSnapshot(docRef, function (snap) {
       if (snap.exists()) {
@@ -1162,12 +1192,24 @@
     currentUser = null;
     docRef = null;
     els.userChip.hidden = true;
-    els.appContent.hidden = true;
-    els.authGate.hidden = false;
+    els.authTriggerBtn.hidden = false;
   }
 
   onAuthStateChanged(auth, function (user) {
     if (user) startCloudSync(user); else stopCloudSync();
+  });
+
+  els.authTriggerBtn.addEventListener("click", function () {
+    els.authError.textContent = "";
+    els.authGate.hidden = false;
+  });
+
+  els.authCloseBtn.addEventListener("click", function () {
+    els.authGate.hidden = true;
+  });
+
+  els.authGate.addEventListener("click", function (ev) {
+    if (ev.target === els.authGate) els.authGate.hidden = true;
   });
 
   els.googleSignInBtn.addEventListener("click", function () {
@@ -1180,15 +1222,6 @@
 
   els.signOutBtn.addEventListener("click", function () {
     signOut(auth);
-  });
-
-  // Escape hatch for environments where Google sign-in can't run (e.g. this
-  // page embedded in a sandboxed preview) — use the tracker locally, same as
-  // before cloud sync existed. Nothing is lost: signing in later adopts
-  // whatever is already saved on this device.
-  els.skipAuthBtn.addEventListener("click", function () {
-    els.authGate.hidden = true;
-    els.appContent.hidden = false;
   });
 
   function handleLedgerDeleteClick(ev, onArmedReset) {
