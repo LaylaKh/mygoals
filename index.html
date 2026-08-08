@@ -147,14 +147,6 @@
   input[type="text"]::placeholder { color: var(--faint); }
   input[type="text"]:focus { border-bottom-color: var(--accent); }
 
-  select#projectSelect {
-    background: var(--surface-2);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 13px;
-  }
-
   .timer-display {
     font-size: 44px;
     text-align: right;
@@ -219,14 +211,6 @@
   .entry:last-child { border-bottom: none; }
   .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
   .entry .task { font-size: 15px; }
-  .entry .project-tag {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-    display: block;
-    margin-top: 2px;
-  }
   .entry .range { font-size: 12px; color: var(--muted); white-space: nowrap; }
   .entry .dur { font-size: 15px; white-space: nowrap; }
   .entry .del {
@@ -309,18 +293,11 @@
       <div class="timer-fields">
         <div class="field-line">
           <input type="text" id="taskInput" placeholder="Чем занимаетесь?" autocomplete="off" />
-          <select id="projectSelect"></select>
-        </div>
-        <div class="field-line" id="newProjectLine" style="display:none;">
-          <input type="text" id="newProjectName" placeholder="Название нового проекта" autocomplete="off" style="font-size:14px;" />
-          <input type="color" id="newProjectColor" value="#a8672a" style="width:34px; height:30px; padding:0; border:1px solid var(--line); border-radius:6px; background:none; cursor:pointer;" />
-          <button class="btn" id="addProjectBtn" style="padding:6px 12px; font-size:13px;">Добавить</button>
         </div>
       </div>
       <div class="timer-display idle mono" id="timerDisplay">00:00:00</div>
     </div>
     <div class="timer-actions">
-      <button class="btn" id="toggleProjectForm">+ проект</button>
       <button class="btn btn-start" id="startBtn">Старт</button>
       <button class="btn btn-stop" id="stopBtn" disabled>Стоп</button>
     </div>
@@ -336,7 +313,7 @@
 
   <section>
     <div class="section-head">
-      <h2>По проектам · 7 дней</h2>
+      <h2>Итоги · 7 дней</h2>
       <span class="meta mono" id="weekTotal">0ч 00м</span>
     </div>
     <div class="summary" id="weekSummary"></div>
@@ -350,15 +327,18 @@
   "use strict";
 
   var STORAGE_KEY = "tt_entries_v1";
-  var PROJECTS_KEY = "tt_projects_v1";
   var STATE_KEY = "tt_running_v1";
 
-  var DEFAULT_PROJECTS = [
-    { id: "work", name: "Работа", color: "#a8672a" },
-    { id: "study", name: "Учёба", color: "#4f7a4a" },
-    { id: "personal", name: "Личное", color: "#6a7fb5" },
-    { id: "other", name: "Другое", color: "#8b9187" }
-  ];
+  // A small fixed palette; a task's color is derived deterministically from its name
+  // so the same task always gets the same dot color across sessions.
+  var PALETTE = ["#a8672a", "#4f7a4a", "#6a7fb5", "#b1503c", "#8a6aa8", "#5c8a8f"];
+
+  function colorForTask(name) {
+    var str = name || "Без названия";
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+    return PALETTE[hash % PALETTE.length];
+  }
 
   function load(key, fallback) {
     try {
@@ -369,12 +349,10 @@
   function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
   var entries = load(STORAGE_KEY, []);
-  var projects = load(PROJECTS_KEY, DEFAULT_PROJECTS);
-  var running = load(STATE_KEY, null); // { task, projectId, startedAt }
+  var running = load(STATE_KEY, null); // { task, startedAt }
 
   var els = {
     taskInput: document.getElementById("taskInput"),
-    projectSelect: document.getElementById("projectSelect"),
     startBtn: document.getElementById("startBtn"),
     stopBtn: document.getElementById("stopBtn"),
     timerDisplay: document.getElementById("timerDisplay"),
@@ -383,29 +361,8 @@
     weekSummary: document.getElementById("weekSummary"),
     weekTotal: document.getElementById("weekTotal"),
     liveClock: document.getElementById("liveClock"),
-    todayDate: document.getElementById("todayDate"),
-    toggleProjectForm: document.getElementById("toggleProjectForm"),
-    newProjectLine: document.getElementById("newProjectLine"),
-    newProjectName: document.getElementById("newProjectName"),
-    newProjectColor: document.getElementById("newProjectColor"),
-    addProjectBtn: document.getElementById("addProjectBtn")
+    todayDate: document.getElementById("todayDate")
   };
-
-  function projectById(id) {
-    for (var i = 0; i < projects.length; i++) if (projects[i].id === id) return projects[i];
-    return projects[0];
-  }
-
-  function renderProjectSelect() {
-    els.projectSelect.innerHTML = "";
-    projects.forEach(function (p) {
-      var opt = document.createElement("option");
-      opt.value = p.id;
-      opt.textContent = p.name;
-      els.projectSelect.appendChild(opt);
-    });
-    if (running) els.projectSelect.value = running.projectId;
-  }
 
   function fmtDuration(ms) {
     var totalSec = Math.max(0, Math.floor(ms / 1000));
@@ -447,15 +404,11 @@
       els.todayLedger.appendChild(empty);
     } else {
       todays.forEach(function (e) {
-        var p = projectById(e.projectId);
         var row = document.createElement("div");
         row.className = "entry";
         row.innerHTML =
-          '<span class="dot" style="background:' + p.color + '"></span>' +
-          '<span>' +
-            '<span class="task">' + escapeHtml(e.task || "Без названия") + '</span>' +
-            '<span class="project-tag">' + escapeHtml(p.name) + '</span>' +
-          '</span>' +
+          '<span class="dot" style="background:' + colorForTask(e.task) + '"></span>' +
+          '<span class="task">' + escapeHtml(e.task || "Без названия") + '</span>' +
           '<span class="range mono">' + fmtTimeOfDay(e.start) + '–' + fmtTimeOfDay(e.end) + '</span>' +
           '<span class="dur mono">' + fmtHoursShort(e.end - e.start) + '</span>' +
           '<button class="del" title="Удалить" data-id="' + e.id + '">✕</button>';
@@ -469,18 +422,18 @@
 
   function renderWeekSummary() {
     var weekStart = Date.now() - 7 * 24 * 3600 * 1000;
-    var byProject = {};
+    var byTask = {};
     var total = 0;
     entries.filter(function (e) { return e.start >= weekStart; }).forEach(function (e) {
+      var name = e.task || "Без названия";
       var dur = e.end - e.start;
-      byProject[e.projectId] = (byProject[e.projectId] || 0) + dur;
+      byTask[name] = (byTask[name] || 0) + dur;
       total += dur;
     });
 
     els.weekSummary.innerHTML = "";
-    var rows = projects
-      .map(function (p) { return { p: p, dur: byProject[p.id] || 0 }; })
-      .filter(function (r) { return r.dur > 0; })
+    var rows = Object.keys(byTask)
+      .map(function (name) { return { name: name, dur: byTask[name] }; })
       .sort(function (a, b) { return b.dur - a.dur; });
 
     if (rows.length === 0) {
@@ -491,12 +444,13 @@
     } else {
       var max = rows[0].dur;
       rows.forEach(function (r) {
+        var color = colorForTask(r.name);
         var row = document.createElement("div");
         row.className = "summary-row";
         var pct = max > 0 ? Math.round((r.dur / max) * 100) : 0;
         row.innerHTML =
-          '<span class="label"><span class="dot" style="background:' + r.p.color + '"></span>' + escapeHtml(r.p.name) + '</span>' +
-          '<span class="bar-track"><span class="bar-fill" style="width:' + pct + '%; background:' + r.p.color + '"></span></span>' +
+          '<span class="label"><span class="dot" style="background:' + color + '"></span>' + escapeHtml(r.name) + '</span>' +
+          '<span class="bar-track"><span class="bar-fill" style="width:' + pct + '%; background:' + color + '"></span></span>' +
           '<span class="val mono">' + fmtHoursShort(r.dur) + '</span>';
         els.weekSummary.appendChild(row);
       });
@@ -519,14 +473,12 @@
       els.startBtn.disabled = true;
       els.stopBtn.disabled = false;
       els.taskInput.disabled = true;
-      els.projectSelect.disabled = true;
     } else {
       els.timerDisplay.className = "timer-display idle mono";
       els.timerDisplay.textContent = "00:00:00";
       els.startBtn.disabled = false;
       els.stopBtn.disabled = true;
       els.taskInput.disabled = false;
-      els.projectSelect.disabled = false;
     }
   }
 
@@ -544,7 +496,6 @@
   els.startBtn.addEventListener("click", function () {
     running = {
       task: els.taskInput.value.trim(),
-      projectId: els.projectSelect.value,
       startedAt: Date.now()
     };
     save(STATE_KEY, running);
@@ -556,7 +507,6 @@
     var entry = {
       id: String(Date.now()) + Math.random().toString(16).slice(2),
       task: running.task,
-      projectId: running.projectId,
       start: running.startedAt,
       end: Date.now()
     };
@@ -580,29 +530,11 @@
     renderWeekSummary();
   });
 
-  els.toggleProjectForm.addEventListener("click", function () {
-    var visible = els.newProjectLine.style.display !== "none";
-    els.newProjectLine.style.display = visible ? "none" : "flex";
-  });
-
-  els.addProjectBtn.addEventListener("click", function () {
-    var name = els.newProjectName.value.trim();
-    if (!name) return;
-    var id = "p" + Date.now();
-    projects.push({ id: id, name: name, color: els.newProjectColor.value });
-    save(PROJECTS_KEY, projects);
-    renderProjectSelect();
-    els.projectSelect.value = id;
-    els.newProjectName.value = "";
-    els.newProjectLine.style.display = "none";
-  });
-
   els.taskInput.addEventListener("keydown", function (ev) {
     if (ev.key === "Enter" && !els.startBtn.disabled) els.startBtn.click();
   });
 
   // init
-  renderProjectSelect();
   if (running) {
     els.taskInput.value = running.task || "";
   }
