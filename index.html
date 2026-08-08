@@ -375,7 +375,8 @@
   .entry .task { font-size: 15px; }
   .entry .range { font-size: 12px; color: var(--muted); white-space: nowrap; }
   .entry .dur { font-size: 15px; white-space: nowrap; }
-  .entry .del {
+  /* Shared by every deletable row — entries, day details and goals alike. */
+  .del {
     background: none;
     border: none;
     color: var(--faint);
@@ -384,8 +385,8 @@
     line-height: 1;
     padding: 4px;
   }
-  .entry .del:hover { color: var(--bad); }
-  .entry .del.confirm {
+  .del:hover { color: var(--bad); }
+  .del.confirm {
     color: var(--bad);
     font-size: 11px;
     text-transform: uppercase;
