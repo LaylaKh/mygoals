@@ -150,6 +150,15 @@
   :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
   :root[data-theme="light"] .theme-toggle .icon-moon { display: block; }
   :root[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+  .motto {
+    margin: 0;
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--accent);
+    text-align: center;
+    align-self: center;
+  }
   .masthead-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
   .clock {
     font-size: 13px;
@@ -554,6 +563,8 @@
     .entry .range { grid-column: 2 / 3; }
     .entry .del { justify-self: end; }
     .cal-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+    /* No room for the motto between the title and the clock on a phone. */
+    .motto { display: none; }
   }
 </style>
 
@@ -573,6 +584,7 @@
         </svg>
       </button>
     </div>
+    <p class="motto">Не отвлекайся</p>
     <div class="masthead-right">
       <div class="clock">
         <span class="date" id="todayDate"></span>
