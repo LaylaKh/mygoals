@@ -114,6 +114,7 @@
     font-size: 11px;
     color: var(--faint);
   }
+  .masthead-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
   .clock {
     font-size: 13px;
     color: var(--muted);
@@ -121,6 +122,51 @@
   }
   .clock .date { display: block; }
   .clock .time { display: block; font-size: 16px; color: var(--ink); }
+
+  /* ---- Account / auth ---- */
+  .user-chip { display: flex; align-items: center; gap: 8px; }
+  .user-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--surface-2); }
+  .user-name { font-size: 12px; color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-signout {
+    background: none;
+    border: none;
+    color: var(--faint);
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+  .user-signout:hover { color: var(--bad); }
+
+  .auth-gate { display: flex; align-items: center; justify-content: center; padding: 64px 16px; }
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 36px 32px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .auth-card h2 { font-size: 20px; }
+  .auth-card p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0; }
+  .btn-google {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-weight: 600;
+    padding: 10px 22px;
+  }
+  .auth-error { color: var(--bad); font-size: 13px; min-height: 1.2em; }
 
   /* ---- Timer card ---- */
   .timer-card {
@@ -431,12 +477,37 @@
         <h1>Трекер времени</h1>
       </div>
     </div>
-    <div class="clock">
-      <span class="date" id="todayDate"></span>
-      <span class="time mono" id="liveClock"></span>
+    <div class="masthead-right">
+      <div class="clock">
+        <span class="date" id="todayDate"></span>
+        <span class="time mono" id="liveClock"></span>
+      </div>
+      <div class="user-chip" id="userChip" hidden>
+        <img class="user-avatar" id="userAvatar" alt="" />
+        <span class="user-name" id="userName"></span>
+        <button class="user-signout" id="signOutBtn" type="button">Выйти</button>
+      </div>
     </div>
   </header>
 
+  <div class="auth-gate" id="authGate" hidden>
+    <div class="auth-card">
+      <h2>Вход в трекер</h2>
+      <p>Войдите через Google — записи будут привязаны к вашему аккаунту и одинаковы на телефоне, компьютере и планшете, пока вы сами их не удалите.</p>
+      <button class="btn btn-google" id="googleSignInBtn" type="button">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+          <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.81.54-1.85.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.95v2.33A9 9 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.95A9 9 0 0 0 0 9c0 1.45.35 2.83.95 4.03l3-2.33z"/>
+          <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .95 4.97l3 2.33C4.66 5.17 6.65 3.58 9 3.58z"/>
+        </svg>
+        Войти через Google
+      </button>
+      <p class="auth-error" id="authError"></p>
+    </div>
+  </div>
+
+  <div id="appContent" hidden>
   <nav class="tabs" role="tablist">
     <button class="tab-btn active" id="tabBtnTracker" role="tab" aria-selected="true" data-tab="tracker">Трекер</button>
     <button class="tab-btn" id="tabBtnCalendar" role="tab" aria-selected="false" data-tab="calendar">Календарь</button>
@@ -512,10 +583,34 @@
     </section>
   </div>
 
-  <footer class="hint">Данные хранятся локально в этом браузере.</footer>
+  </div>
+
+  <footer class="hint">Данные привязаны к вашему Google-аккаунту и синхронизируются между устройствами.</footer>
 </div>
 
-<script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, setDoc, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyA1T_1HjcjZLb-G-yIoRrCMzYUV1oS49FQ",
+    authDomain: "mygoalssite-138c8.firebaseapp.com",
+    projectId: "mygoalssite-138c8",
+    storageBucket: "mygoalssite-138c8.firebasestorage.app",
+    messagingSenderId: "673449468386",
+    appId: "1:673449468386:web:992ec89f493087f18d19bb"
+  };
+
+  var firebaseApp = initializeApp(firebaseConfig);
+  var auth = getAuth(firebaseApp);
+  var db = getFirestore(firebaseApp);
+  var googleProvider = new GoogleAuthProvider();
+
 (function () {
   "use strict";
 
@@ -546,6 +641,14 @@
   // segmentStartedAt is null while paused; accumulated holds ms from finished segments.
   var running = load(STATE_KEY, null);
 
+  // Cloud sync state. localStorage stays as an offline cache; Firestore
+  // (one document per signed-in user, under users/{uid}) is the source of
+  // truth once signed in, kept live across devices via onSnapshot.
+  var currentUser = null;
+  var docRef = null;
+  var unsubscribeSnapshot = null;
+  var applyingRemote = false;
+
   var els = {
     taskInput: document.getElementById("taskInput"),
     startBtn: document.getElementById("startBtn"),
@@ -568,7 +671,15 @@
     calGrid: document.getElementById("calGrid"),
     dayDetailTitle: document.getElementById("dayDetailTitle"),
     dayDetailTotal: document.getElementById("dayDetailTotal"),
-    dayDetailLedger: document.getElementById("dayDetailLedger")
+    dayDetailLedger: document.getElementById("dayDetailLedger"),
+    authGate: document.getElementById("authGate"),
+    appContent: document.getElementById("appContent"),
+    googleSignInBtn: document.getElementById("googleSignInBtn"),
+    authError: document.getElementById("authError"),
+    userChip: document.getElementById("userChip"),
+    userAvatar: document.getElementById("userAvatar"),
+    userName: document.getElementById("userName"),
+    signOutBtn: document.getElementById("signOutBtn")
   };
 
   function fmtDuration(ms) {
@@ -922,7 +1033,7 @@
       accumulated: 0,
       paused: false
     };
-    save(STATE_KEY, running);
+    persistRunning();
     renderTimer();
   });
 
@@ -936,7 +1047,7 @@
       running.segmentStartedAt = null;
       running.paused = true;
     }
-    save(STATE_KEY, running);
+    persistRunning();
     renderTimer();
   });
 
@@ -950,9 +1061,9 @@
       duration: elapsedMs()
     };
     entries.push(entry);
-    save(STORAGE_KEY, entries);
+    persistEntries();
     running = null;
-    localStorage.removeItem(STATE_KEY);
+    persistRunning();
     els.taskInput.value = "";
     renderTimer();
     afterEntriesChanged();
@@ -975,6 +1086,89 @@
     if (els.calGrid.childElementCount) renderCalendar();
     if (selectedDateKey) renderDayDetail(selectedDateKey);
   }
+
+  // Every local change is saved to localStorage right away (works instantly,
+  // survives offline) and mirrored to the signed-in user's Firestore
+  // document, which is what actually makes it show up on other devices.
+  function persistEntries() {
+    save(STORAGE_KEY, entries);
+    if (currentUser && docRef && !applyingRemote) {
+      setDoc(docRef, { entries: entries, updatedAt: Date.now() }, { merge: true })
+        .catch(function (err) { console.error("Cloud sync failed", err); });
+    }
+  }
+
+  function persistRunning() {
+    if (running) save(STATE_KEY, running); else localStorage.removeItem(STATE_KEY);
+    if (currentUser && docRef && !applyingRemote) {
+      setDoc(docRef, { running: running, updatedAt: Date.now() }, { merge: true })
+        .catch(function (err) { console.error("Cloud sync failed", err); });
+    }
+  }
+
+  // A snapshot from Firestore (our own echo, or a change made on another
+  // device) replaces local state outright and re-renders everything.
+  function applyRemoteData(data) {
+    applyingRemote = true;
+    entries = Array.isArray(data.entries) ? data.entries : [];
+    running = data.running || null;
+    save(STORAGE_KEY, entries);
+    if (running) save(STATE_KEY, running); else localStorage.removeItem(STATE_KEY);
+    els.taskInput.value = running ? (running.task || "") : "";
+    renderTimer();
+    afterEntriesChanged();
+    applyingRemote = false;
+  }
+
+  function startCloudSync(user) {
+    currentUser = user;
+    docRef = doc(db, "users", user.uid);
+
+    els.userAvatar.src = user.photoURL || "";
+    els.userName.textContent = user.displayName || user.email || "";
+    els.userChip.hidden = false;
+    els.authGate.hidden = true;
+    els.appContent.hidden = false;
+
+    unsubscribeSnapshot = onSnapshot(docRef, function (snap) {
+      if (snap.exists()) {
+        applyRemoteData(snap.data());
+      } else {
+        // First sign-in on this account: seed the cloud document with
+        // whatever is already tracked on this device, so nothing is lost.
+        setDoc(docRef, { entries: entries, running: running, updatedAt: Date.now() })
+          .catch(function (err) { console.error("Initial cloud sync failed", err); });
+      }
+    }, function (err) {
+      console.error("Cloud sync listener failed", err);
+      els.authError.textContent = "Не удалось синхронизироваться с облаком: " + err.message;
+    });
+  }
+
+  function stopCloudSync() {
+    if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+    currentUser = null;
+    docRef = null;
+    els.userChip.hidden = true;
+    els.appContent.hidden = true;
+    els.authGate.hidden = false;
+  }
+
+  onAuthStateChanged(auth, function (user) {
+    if (user) startCloudSync(user); else stopCloudSync();
+  });
+
+  els.googleSignInBtn.addEventListener("click", function () {
+    els.authError.textContent = "";
+    signInWithPopup(auth, googleProvider).catch(function (err) {
+      console.error(err);
+      els.authError.textContent = "Не удалось войти: " + err.message;
+    });
+  });
+
+  els.signOutBtn.addEventListener("click", function () {
+    signOut(auth);
+  });
 
   function handleLedgerDeleteClick(ev, onArmedReset) {
     var btn = ev.target.closest(".del");
@@ -1003,7 +1197,7 @@
     resetPendingDelete();
     var idSet = ids.reduce(function (set, id) { set[id] = true; return set; }, {});
     entries = entries.filter(function (e) { return !idSet[e.id]; });
-    save(STORAGE_KEY, entries);
+    persistEntries();
     afterEntriesChanged();
   }
 
