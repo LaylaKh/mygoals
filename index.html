@@ -577,6 +577,8 @@
   .goal-form-range { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   /* The native arrow sits hard against the right edge and can't be moved, so
      it's replaced with one drawn inset from the border. */
+  /* No border — the filled chip reads as a control on its own, and a rule
+     around it only adds visual weight. */
   .goal-form select {
     appearance: none;
     -webkit-appearance: none;
@@ -584,7 +586,7 @@
     background-image: var(--select-arrow);
     background-repeat: no-repeat;
     background-position: right 14px center;
-    border: 1px solid var(--line);
+    border: none;
     border-radius: 6px;
     padding: 0 38px 0 12px;
     font-size: 14px;
@@ -598,7 +600,7 @@
     line-height: 1;
     box-sizing: border-box;
   }
-  .goal-form .btn { padding-top: 0; padding-bottom: 0; }
+  .goal-form .btn { padding-top: 0; padding-bottom: 0; border: none; }
   .goal-dash { color: var(--faint); margin: 0 -4px; }
   /* The year sits apart from the month pair it qualifies. */
   #goalYear { margin-left: 6px; }
@@ -631,7 +633,7 @@
     background-image: var(--select-arrow);
     background-repeat: no-repeat;
     background-position: right 14px center;
-    border: 1px solid var(--line);
+    border: none;
     border-radius: 6px;
     padding: 0 38px 0 12px;
     font-size: 14px;
