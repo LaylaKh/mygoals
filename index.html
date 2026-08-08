@@ -668,7 +668,32 @@
     color: var(--muted);
   }
   .goal-status.active { background: var(--accent-soft); color: var(--accent); }
-  .goal-status.done { background: var(--accent-soft); color: var(--good); }
+  .goal-status.done { background: var(--good); color: #fff; }
+  .goal-status.missed { background: var(--surface-2); color: var(--bad); }
+  .goal-progress {
+    display: block;
+    font-size: 13px;
+    color: var(--ink);
+    margin-top: 5px;
+  }
+  .goal-task { flex: 0 1 150px; font-size: 14px !important; }
+  .goal-hours { flex: 0 0 88px; font-size: 14px !important; }
+  .goal-form input[type="number"],
+  .goal-form .goal-task,
+  .goal-edit-controls input[type="number"],
+  .goal-edit-controls input[type="text"] {
+    background: var(--surface-2);
+    border: none;
+    border-radius: 6px;
+    height: 40px;
+    padding: 0 12px;
+    color: var(--ink);
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  .goal-edit-controls input { height: 36px; }
+  .goal-form input[type="number"]::placeholder,
+  .goal-edit-controls input::placeholder { color: var(--faint); }
 
   @media (max-width: 560px) {
     .timer-row { grid-template-columns: 1fr; }
@@ -819,6 +844,9 @@
       <div class="goal-form">
         <input type="text" id="goalNameInput" placeholder="Название цели" autocomplete="off" />
         <div class="goal-form-range">
+          <input type="text" id="goalTaskInput" class="goal-task" list="taskNames" placeholder="Задача в трекере" autocomplete="off" />
+          <datalist id="taskNames"></datalist>
+          <input type="number" id="goalHoursInput" class="goal-hours" min="1" step="1" placeholder="часов" />
           <select id="goalStartMonth" aria-label="Месяц начала"></select>
           <span class="goal-dash">—</span>
           <select id="goalEndMonth" aria-label="Месяц окончания"></select>
@@ -937,6 +965,9 @@
     tabBtnGoals: document.getElementById("tabBtnGoals"),
     panelGoals: document.getElementById("panelGoals"),
     goalNameInput: document.getElementById("goalNameInput"),
+    goalTaskInput: document.getElementById("goalTaskInput"),
+    goalHoursInput: document.getElementById("goalHoursInput"),
+    taskNames: document.getElementById("taskNames"),
     goalStartMonth: document.getElementById("goalStartMonth"),
     goalEndMonth: document.getElementById("goalEndMonth"),
     goalYear: document.getElementById("goalYear"),
@@ -1321,6 +1352,20 @@
     els.goalYear.value = thisYear;
   }
 
+  // Hours actually tracked toward a goal: every entry whose task name matches
+  // the goal's, dated inside the goal's month range.
+  function goalProgressMs(goal) {
+    if (!goal.task) return 0;
+    var wanted = goal.task.trim().toLowerCase();
+    var from = new Date(goal.year, goal.startMonth, 1).getTime();
+    var to = new Date(goal.year, goal.endMonth + 1, 1).getTime();
+    return entries.reduce(function (sum, e) {
+      if (e.start < from || e.start >= to) return sum;
+      if ((e.task || "").trim().toLowerCase() !== wanted) return sum;
+      return sum + entryDuration(e);
+    }, 0);
+  }
+
   // How far the goal's end month is from the current month. The month you're
   // in counts as one, so a goal ending this month reads "осталось 1 месяц".
   function goalStatus(goal) {
@@ -1329,13 +1374,29 @@
     var startIndex = goal.year * 12 + goal.startMonth;
     var endIndex = goal.year * 12 + goal.endMonth;
 
-    if (nowIndex > endIndex) return { text: "Завершена", cls: "done" };
+    // An hours target decides the outcome; the date only decides whether
+    // there's still time left to reach it.
+    if (goal.targetHours > 0) {
+      var doneMs = goalProgressMs(goal);
+      if (doneMs >= goal.targetHours * 3600000) {
+        return { text: "Достигнута", cls: "done" };
+      }
+      if (nowIndex > endIndex) return { text: "Срок вышел", cls: "missed" };
+    } else if (nowIndex > endIndex) {
+      return { text: "Срок вышел", cls: "missed" };
+    }
+
     if (nowIndex < startIndex) {
       var untilStart = startIndex - nowIndex;
       return { text: "Начнётся через " + untilStart + " " + pluralMonths(untilStart), cls: "" };
     }
     var left = endIndex - nowIndex + 1;
     return { text: "Осталось: " + left + " " + pluralMonths(left), cls: "active" };
+  }
+
+  // Whole hours read cleanly ("12 ч"); partial ones keep one decimal.
+  function formatHours(h) {
+    return (Math.round(h * 10) / 10).toString().replace(".", ",");
   }
 
   function pluralMonths(n) {
@@ -1347,7 +1408,24 @@
 
   var editingGoalId = null;
 
+  // Suggests task names already used in the tracker, so a goal links to real
+  // entries instead of a near-miss spelling.
+  function refreshTaskSuggestions() {
+    var seen = {};
+    entries.forEach(function (e) {
+      var name = (e.task || "").trim();
+      if (name) seen[name] = true;
+    });
+    els.taskNames.innerHTML = "";
+    Object.keys(seen).sort().forEach(function (name) {
+      var opt = document.createElement("option");
+      opt.value = name;
+      els.taskNames.appendChild(opt);
+    });
+  }
+
   function renderGoals() {
+    refreshTaskSuggestions();
     els.goalList.innerHTML = "";
     els.goalsCount.textContent = goals.length ? goals.length + " шт." : "";
 
@@ -1374,12 +1452,24 @@
       (g.startMonth === g.endMonth ? "" : " — " + MONTH_NAMES[g.endMonth]) +
       " " + g.year;
 
+    var progressLine = "";
+    if (g.targetHours > 0) {
+      var doneHours = goalProgressMs(g) / 3600000;
+      var pct = Math.min(100, Math.round((doneHours / g.targetHours) * 100));
+      progressLine =
+        '<span class="goal-progress mono">' +
+          escapeHtml(formatHours(doneHours)) + ' из ' + g.targetHours + ' ч · ' + pct + '%' +
+        '</span>';
+    }
+
     var row = document.createElement("div");
     row.className = "goal-item";
     row.innerHTML =
       '<span>' +
         '<span class="goal-name">' + escapeHtml(g.name) + '</span>' +
-        '<span class="goal-range">' + escapeHtml(range) + '</span>' +
+        '<span class="goal-range">' + escapeHtml(range) +
+          (g.task ? ' · ' + escapeHtml(g.task) : '') + '</span>' +
+        progressLine +
       '</span>' +
       '<span class="goal-status ' + status.cls + '">' + escapeHtml(status.text) + '</span>' +
       '<button class="icon-btn edit" title="Изменить срок" data-edit-id="' + g.id + '">' +
@@ -1404,6 +1494,20 @@
     var controls = document.createElement("div");
     controls.className = "goal-edit-controls";
 
+    var taskInput = document.createElement("input");
+    taskInput.type = "text";
+    taskInput.className = "goal-task";
+    taskInput.setAttribute("list", "taskNames");
+    taskInput.placeholder = "Задача в трекере";
+    taskInput.value = g.task || "";
+
+    var hoursInput = document.createElement("input");
+    hoursInput.type = "number";
+    hoursInput.className = "goal-hours";
+    hoursInput.min = "1";
+    hoursInput.placeholder = "часов";
+    if (g.targetHours) hoursInput.value = g.targetHours;
+
     var startSel = buildMonthSelect(g.startMonth);
     var dash = document.createElement("span");
     dash.className = "goal-dash";
@@ -1422,6 +1526,8 @@
       g.startMonth = start;
       g.endMonth = end;
       g.year = Number(yearSel.value);
+      g.task = taskInput.value.trim();
+      g.targetHours = Number(hoursInput.value) || 0;
       editingGoalId = null;
       persistGoals();
       renderGoals();
@@ -1436,6 +1542,8 @@
       renderGoals();
     });
 
+    controls.appendChild(taskInput);
+    controls.appendChild(hoursInput);
     controls.appendChild(startSel);
     controls.appendChild(dash);
     controls.appendChild(endSel);
@@ -1488,12 +1596,16 @@
     goals.push({
       id: String(Date.now()) + Math.random().toString(16).slice(2),
       name: name,
+      task: els.goalTaskInput.value.trim(),
+      targetHours: Number(els.goalHoursInput.value) || 0,
       year: Number(els.goalYear.value),
       startMonth: startMonth,
       endMonth: endMonth
     });
     persistGoals();
     els.goalNameInput.value = "";
+    els.goalTaskInput.value = "";
+    els.goalHoursInput.value = "";
     renderGoals();
   });
 
@@ -1663,6 +1775,8 @@
     renderWeekSummary();
     if (els.calGrid.childElementCount) renderCalendar();
     if (selectedDateKey) renderDayDetail(selectedDateKey);
+    // Goal progress is derived from entries, so it moves with them.
+    renderGoals();
   }
 
   // Every local change is saved to localStorage right away (works instantly,
