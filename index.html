@@ -1,0 +1,616 @@
+<title>Учёт часов — трекер времени</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #eef0ec;
+    --surface: #ffffff;
+    --surface-2: #e4e7e1;
+    --ink: #1b1f1c;
+    --muted: #5c6359;
+    --faint: #8b9187;
+    --line: #d3d7cd;
+    --accent: #a8672a;
+    --accent-ink: #ffffff;
+    --accent-soft: #f0ddc0;
+    --good: #4f7a4a;
+    --bad: #b1503c;
+    --shadow: 0 1px 2px rgba(30, 30, 20, 0.06), 0 8px 24px -12px rgba(30, 30, 20, 0.18);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141713;
+      --surface: #1c201b;
+      --surface-2: #23271f;
+      --ink: #e9ebe4;
+      --muted: #9aa093;
+      --faint: #6b7165;
+      --line: #31352c;
+      --accent: #dd9c4f;
+      --accent-ink: #1c1305;
+      --accent-soft: #3a2c15;
+      --good: #7fb677;
+      --bad: #d97a63;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 28px -12px rgba(0, 0, 0, 0.55);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141713;
+    --surface: #1c201b;
+    --surface-2: #23271f;
+    --ink: #e9ebe4;
+    --muted: #9aa093;
+    --faint: #6b7165;
+    --line: #31352c;
+    --accent: #dd9c4f;
+    --accent-ink: #1c1305;
+    --accent-soft: #3a2c15;
+    --good: #7fb677;
+    --bad: #d97a63;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 28px -12px rgba(0, 0, 0, 0.55);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif; font-weight: 400; text-wrap: balance; margin: 0; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace; font-variant-numeric: tabular-nums; }
+  button { font: inherit; }
+  input, select { font: inherit; color: inherit; }
+  ::selection { background: var(--accent-soft); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
+
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 40px 24px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* ---- Masthead ---- */
+  .masthead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 18px;
+  }
+  .masthead .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .masthead h1 { font-size: 26px; letter-spacing: 0.2px; }
+  .masthead .kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.11em;
+    font-size: 11px;
+    color: var(--faint);
+  }
+  .clock {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: right;
+  }
+  .clock .date { display: block; }
+  .clock .time { display: block; font-size: 16px; color: var(--ink); }
+
+  /* ---- Timer card ---- */
+  .timer-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .timer-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: center;
+  }
+  .timer-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .field-line {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  input[type="text"] {
+    flex: 1 1 220px;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    padding: 6px 2px;
+    font-size: 18px;
+    color: var(--ink);
+  }
+  input[type="text"]::placeholder { color: var(--faint); }
+  input[type="text"]:focus { border-bottom-color: var(--accent); }
+
+  select#projectSelect {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .timer-display {
+    font-size: 44px;
+    text-align: right;
+    min-width: 200px;
+    letter-spacing: 0.5px;
+  }
+  .timer-display.idle { color: var(--faint); }
+  .timer-display.running { color: var(--accent); }
+
+  .timer-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .btn {
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--ink);
+    border-radius: 7px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: filter 0.12s ease;
+  }
+  .btn:hover { filter: brightness(0.96); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .btn:hover { filter: brightness(1.15); }
+  }
+  :root[data-theme="dark"] .btn:hover { filter: brightness(1.15); }
+  .btn-start {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  .btn-stop {
+    background: var(--bad);
+    border-color: var(--bad);
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ---- Section headers ---- */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+  }
+  .section-head h2 { font-size: 18px; }
+  .section-head .meta { font-size: 12px; color: var(--muted); }
+
+  /* ---- Ledger (today's entries) ---- */
+  .ledger { display: flex; flex-direction: column; }
+  .entry {
+    display: grid;
+    grid-template-columns: 10px 1fr auto auto auto;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .entry:last-child { border-bottom: none; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .entry .task { font-size: 15px; }
+  .entry .project-tag {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    display: block;
+    margin-top: 2px;
+  }
+  .entry .range { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .entry .dur { font-size: 15px; white-space: nowrap; }
+  .entry .del {
+    background: none;
+    border: none;
+    color: var(--faint);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 4px;
+  }
+  .entry .del:hover { color: var(--bad); }
+  .empty {
+    color: var(--faint);
+    font-size: 14px;
+    padding: 22px 4px;
+    text-align: center;
+  }
+
+  /* ---- Summary ---- */
+  .summary { display: flex; flex-direction: column; gap: 10px; }
+  .summary-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 64px;
+    align-items: center;
+    gap: 12px;
+  }
+  .summary-row .label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .bar-track {
+    height: 8px;
+    background: var(--surface-2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bar-fill { height: 100%; border-radius: 4px; }
+  .summary-row .val { font-size: 13px; text-align: right; color: var(--ink); }
+  .summary-total {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 10px;
+    margin-top: 4px;
+    border-top: 1px solid var(--line);
+    font-size: 15px;
+  }
+  .summary-total .n { font-size: 18px; }
+
+  footer.hint {
+    text-align: center;
+    color: var(--faint);
+    font-size: 12px;
+    padding-top: 8px;
+  }
+
+  @media (max-width: 560px) {
+    .timer-row { grid-template-columns: 1fr; }
+    .timer-display { text-align: left; font-size: 38px; }
+    .timer-actions { justify-content: flex-start; }
+    .entry { grid-template-columns: 8px 1fr auto; row-gap: 4px; }
+    .entry .range { grid-column: 2 / 3; }
+    .entry .del { justify-self: end; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand">
+      <div>
+        <span class="kicker">учёт часов</span>
+        <h1>Трекер времени</h1>
+      </div>
+    </div>
+    <div class="clock">
+      <span class="date" id="todayDate"></span>
+      <span class="time mono" id="liveClock"></span>
+    </div>
+  </header>
+
+  <section class="timer-card">
+    <div class="timer-row">
+      <div class="timer-fields">
+        <div class="field-line">
+          <input type="text" id="taskInput" placeholder="Чем занимаетесь?" autocomplete="off" />
+          <select id="projectSelect"></select>
+        </div>
+        <div class="field-line" id="newProjectLine" style="display:none;">
+          <input type="text" id="newProjectName" placeholder="Название нового проекта" autocomplete="off" style="font-size:14px;" />
+          <input type="color" id="newProjectColor" value="#a8672a" style="width:34px; height:30px; padding:0; border:1px solid var(--line); border-radius:6px; background:none; cursor:pointer;" />
+          <button class="btn" id="addProjectBtn" style="padding:6px 12px; font-size:13px;">Добавить</button>
+        </div>
+      </div>
+      <div class="timer-display idle mono" id="timerDisplay">00:00:00</div>
+    </div>
+    <div class="timer-actions">
+      <button class="btn" id="toggleProjectForm">+ проект</button>
+      <button class="btn btn-start" id="startBtn">Старт</button>
+      <button class="btn btn-stop" id="stopBtn" disabled>Стоп</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Сегодня</h2>
+      <span class="meta mono" id="todayTotal">0ч 00м</span>
+    </div>
+    <div class="ledger" id="todayLedger"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>По проектам · 7 дней</h2>
+      <span class="meta mono" id="weekTotal">0ч 00м</span>
+    </div>
+    <div class="summary" id="weekSummary"></div>
+  </section>
+
+  <footer class="hint">Данные хранятся локально в этом браузере.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "tt_entries_v1";
+  var PROJECTS_KEY = "tt_projects_v1";
+  var STATE_KEY = "tt_running_v1";
+
+  var DEFAULT_PROJECTS = [
+    { id: "work", name: "Работа", color: "#a8672a" },
+    { id: "study", name: "Учёба", color: "#4f7a4a" },
+    { id: "personal", name: "Личное", color: "#6a7fb5" },
+    { id: "other", name: "Другое", color: "#8b9187" }
+  ];
+
+  function load(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+  var entries = load(STORAGE_KEY, []);
+  var projects = load(PROJECTS_KEY, DEFAULT_PROJECTS);
+  var running = load(STATE_KEY, null); // { task, projectId, startedAt }
+
+  var els = {
+    taskInput: document.getElementById("taskInput"),
+    projectSelect: document.getElementById("projectSelect"),
+    startBtn: document.getElementById("startBtn"),
+    stopBtn: document.getElementById("stopBtn"),
+    timerDisplay: document.getElementById("timerDisplay"),
+    todayLedger: document.getElementById("todayLedger"),
+    todayTotal: document.getElementById("todayTotal"),
+    weekSummary: document.getElementById("weekSummary"),
+    weekTotal: document.getElementById("weekTotal"),
+    liveClock: document.getElementById("liveClock"),
+    todayDate: document.getElementById("todayDate"),
+    toggleProjectForm: document.getElementById("toggleProjectForm"),
+    newProjectLine: document.getElementById("newProjectLine"),
+    newProjectName: document.getElementById("newProjectName"),
+    newProjectColor: document.getElementById("newProjectColor"),
+    addProjectBtn: document.getElementById("addProjectBtn")
+  };
+
+  function projectById(id) {
+    for (var i = 0; i < projects.length; i++) if (projects[i].id === id) return projects[i];
+    return projects[0];
+  }
+
+  function renderProjectSelect() {
+    els.projectSelect.innerHTML = "";
+    projects.forEach(function (p) {
+      var opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      els.projectSelect.appendChild(opt);
+    });
+    if (running) els.projectSelect.value = running.projectId;
+  }
+
+  function fmtDuration(ms) {
+    var totalSec = Math.max(0, Math.floor(ms / 1000));
+    var h = Math.floor(totalSec / 3600);
+    var m = Math.floor((totalSec % 3600) / 60);
+    var s = totalSec % 60;
+    function pad(n) { return String(n).padStart(2, "0"); }
+    return pad(h) + ":" + pad(m) + ":" + pad(s);
+  }
+
+  function fmtHoursShort(ms) {
+    var totalMin = Math.round(ms / 60000);
+    var h = Math.floor(totalMin / 60);
+    var m = totalMin % 60;
+    return h + "ч " + String(m).padStart(2, "0") + "м";
+  }
+
+  function fmtTimeOfDay(ts) {
+    var d = new Date(ts);
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  function startOfDay(ts) {
+    var d = new Date(ts);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+
+  function renderTodayLedger() {
+    var todayStart = startOfDay(Date.now());
+    var todays = entries.filter(function (e) { return e.start >= todayStart; })
+      .sort(function (a, b) { return b.start - a.start; });
+
+    els.todayLedger.innerHTML = "";
+    if (todays.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "Пока нет записей за сегодня — запустите таймер выше.";
+      els.todayLedger.appendChild(empty);
+    } else {
+      todays.forEach(function (e) {
+        var p = projectById(e.projectId);
+        var row = document.createElement("div");
+        row.className = "entry";
+        row.innerHTML =
+          '<span class="dot" style="background:' + p.color + '"></span>' +
+          '<span>' +
+            '<span class="task">' + escapeHtml(e.task || "Без названия") + '</span>' +
+            '<span class="project-tag">' + escapeHtml(p.name) + '</span>' +
+          '</span>' +
+          '<span class="range mono">' + fmtTimeOfDay(e.start) + '–' + fmtTimeOfDay(e.end) + '</span>' +
+          '<span class="dur mono">' + fmtHoursShort(e.end - e.start) + '</span>' +
+          '<button class="del" title="Удалить" data-id="' + e.id + '">✕</button>';
+        els.todayLedger.appendChild(row);
+      });
+    }
+
+    var totalMs = todays.reduce(function (sum, e) { return sum + (e.end - e.start); }, 0);
+    els.todayTotal.textContent = fmtHoursShort(totalMs);
+  }
+
+  function renderWeekSummary() {
+    var weekStart = Date.now() - 7 * 24 * 3600 * 1000;
+    var byProject = {};
+    var total = 0;
+    entries.filter(function (e) { return e.start >= weekStart; }).forEach(function (e) {
+      var dur = e.end - e.start;
+      byProject[e.projectId] = (byProject[e.projectId] || 0) + dur;
+      total += dur;
+    });
+
+    els.weekSummary.innerHTML = "";
+    var rows = projects
+      .map(function (p) { return { p: p, dur: byProject[p.id] || 0 }; })
+      .filter(function (r) { return r.dur > 0; })
+      .sort(function (a, b) { return b.dur - a.dur; });
+
+    if (rows.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "Записей за неделю пока нет.";
+      els.weekSummary.appendChild(empty);
+    } else {
+      var max = rows[0].dur;
+      rows.forEach(function (r) {
+        var row = document.createElement("div");
+        row.className = "summary-row";
+        var pct = max > 0 ? Math.round((r.dur / max) * 100) : 0;
+        row.innerHTML =
+          '<span class="label"><span class="dot" style="background:' + r.p.color + '"></span>' + escapeHtml(r.p.name) + '</span>' +
+          '<span class="bar-track"><span class="bar-fill" style="width:' + pct + '%; background:' + r.p.color + '"></span></span>' +
+          '<span class="val mono">' + fmtHoursShort(r.dur) + '</span>';
+        els.weekSummary.appendChild(row);
+      });
+    }
+    els.weekTotal.textContent = fmtHoursShort(total);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  var tickHandle = null;
+
+  function renderTimer() {
+    if (running) {
+      els.timerDisplay.className = "timer-display running mono";
+      els.timerDisplay.textContent = fmtDuration(Date.now() - running.startedAt);
+      els.startBtn.disabled = true;
+      els.stopBtn.disabled = false;
+      els.taskInput.disabled = true;
+      els.projectSelect.disabled = true;
+    } else {
+      els.timerDisplay.className = "timer-display idle mono";
+      els.timerDisplay.textContent = "00:00:00";
+      els.startBtn.disabled = false;
+      els.stopBtn.disabled = true;
+      els.taskInput.disabled = false;
+      els.projectSelect.disabled = false;
+    }
+  }
+
+  function tick() {
+    if (running) els.timerDisplay.textContent = fmtDuration(Date.now() - running.startedAt);
+  }
+
+  function updateClock() {
+    var now = new Date();
+    els.liveClock.textContent = String(now.getHours()).padStart(2, "0") + ":" +
+      String(now.getMinutes()).padStart(2, "0") + ":" + String(now.getSeconds()).padStart(2, "0");
+    els.todayDate.textContent = now.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
+  }
+
+  els.startBtn.addEventListener("click", function () {
+    running = {
+      task: els.taskInput.value.trim(),
+      projectId: els.projectSelect.value,
+      startedAt: Date.now()
+    };
+    save(STATE_KEY, running);
+    renderTimer();
+  });
+
+  els.stopBtn.addEventListener("click", function () {
+    if (!running) return;
+    var entry = {
+      id: String(Date.now()) + Math.random().toString(16).slice(2),
+      task: running.task,
+      projectId: running.projectId,
+      start: running.startedAt,
+      end: Date.now()
+    };
+    entries.push(entry);
+    save(STORAGE_KEY, entries);
+    running = null;
+    localStorage.removeItem(STATE_KEY);
+    els.taskInput.value = "";
+    renderTimer();
+    renderTodayLedger();
+    renderWeekSummary();
+  });
+
+  els.todayLedger.addEventListener("click", function (ev) {
+    var btn = ev.target.closest(".del");
+    if (!btn) return;
+    var id = btn.getAttribute("data-id");
+    entries = entries.filter(function (e) { return e.id !== id; });
+    save(STORAGE_KEY, entries);
+    renderTodayLedger();
+    renderWeekSummary();
+  });
+
+  els.toggleProjectForm.addEventListener("click", function () {
+    var visible = els.newProjectLine.style.display !== "none";
+    els.newProjectLine.style.display = visible ? "none" : "flex";
+  });
+
+  els.addProjectBtn.addEventListener("click", function () {
+    var name = els.newProjectName.value.trim();
+    if (!name) return;
+    var id = "p" + Date.now();
+    projects.push({ id: id, name: name, color: els.newProjectColor.value });
+    save(PROJECTS_KEY, projects);
+    renderProjectSelect();
+    els.projectSelect.value = id;
+    els.newProjectName.value = "";
+    els.newProjectLine.style.display = "none";
+  });
+
+  els.taskInput.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" && !els.startBtn.disabled) els.startBtn.click();
+  });
+
+  // init
+  renderProjectSelect();
+  if (running) {
+    els.taskInput.value = running.task || "";
+  }
+  renderTimer();
+  renderTodayLedger();
+  renderWeekSummary();
+  updateClock();
+  setInterval(updateClock, 1000);
+  tickHandle = setInterval(tick, 1000);
+})();
+</script>
