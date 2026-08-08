@@ -1,5 +1,15 @@
 <title>Учёт часов — трекер времени</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="description" content="Трекер времени: таймер, годовой календарь и цели по часам." />
+<!-- Installable to a phone home screen: Chrome reads the manifest, iOS reads
+     the apple-* tags. Both are inline so the page stays a single file. -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Трекер" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#14181f" media="(prefers-color-scheme: dark)" />
+<link rel="manifest" href='data:application/manifest+json,{"name":"Трекер времени","short_name":"Трекер","display":"standalone","orientation":"any","background_color":"%23f4f1ea","theme_color":"%23f4f1ea","start_url":"./","icons":[{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 rx=%2242%22 fill=%22%2314181f%22/%3E%3Ccircle cx=%2296%22 cy=%22100%22 r=%2246%22 fill=%22none%22 stroke=%22%23e0a44a%22 stroke-width=%229%22/%3E%3Cpath d=%22M96 72v30l20 12%22 fill=%22none%22 stroke=%22%23e0a44a%22 stroke-width=%229%22 stroke-linecap=%22round%22/%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml","purpose":"any"}]}' />
 <script>
   // Applied before first paint so a remembered theme never flashes the other one.
   try {
@@ -87,6 +97,8 @@
      the cascade and the element stays on screen. */
   [hidden] { display: none !important; }
   html, body { margin: 0; padding: 0; }
+  /* Stops iOS inflating text when the phone is rotated. */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body {
     background: var(--bg);
     color: var(--ink);
@@ -104,13 +116,19 @@
   :focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
 
+  /* Padding scales with the viewport and clears the notch / home indicator
+     when installed to a home screen. */
   .wrap {
     max-width: 880px;
     margin: 0 auto;
-    padding: 40px 24px 96px;
+    padding:
+      calc(env(safe-area-inset-top) + clamp(20px, 4vw, 40px))
+      calc(env(safe-area-inset-right) + clamp(16px, 4vw, 24px))
+      calc(env(safe-area-inset-bottom) + 64px)
+      calc(env(safe-area-inset-left) + clamp(16px, 4vw, 24px));
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    gap: clamp(20px, 3vw, 28px);
   }
 
   /* ---- Masthead ---- */
@@ -695,15 +713,86 @@
   .goal-form input[type="number"]::placeholder,
   .goal-edit-controls input::placeholder { color: var(--faint); }
 
-  @media (max-width: 560px) {
-    .timer-row { grid-template-columns: 1fr; }
-    .timer-display { text-align: left; font-size: 38px; }
-    .entry { grid-template-columns: 8px 1fr auto; row-gap: 4px; }
+  /* Hover effects only where a pointer can actually hover — on a touchscreen
+     they stick after a tap and look like a stuck state. */
+  @media (hover: none) {
+    .btn:hover,
+    .del:hover,
+    .icon-btn:hover,
+    .theme-toggle:hover,
+    .tab-btn:hover,
+    .day-cell:hover { filter: none; color: inherit; }
+    .del:hover { color: var(--faint); }
+  }
+
+  /* Finger-sized targets on touch devices. */
+  @media (pointer: coarse) {
+    /* Under 16px iOS zooms the page when a field is focused. */
+    input, select, textarea { font-size: 16px !important; }
+    .del, .icon-btn { padding: 10px; }
+    .tab-btn { padding: 14px 4px; }
+    .theme-toggle { width: 38px; height: 38px; }
+    .user-signout, .auth-trigger { padding: 6px 0; }
+  }
+
+  /* ---- Tablet ---- */
+  @media (max-width: 860px) {
+    .motto { font-size: 14px; }
+    .cal-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  }
+
+  /* ---- Phone ---- */
+  @media (max-width: 640px) {
+    .masthead {
+      flex-wrap: wrap;
+      row-gap: 10px;
+      align-items: center;
+    }
+    .masthead h1 { font-size: 22px; }
+    /* The motto would squeeze the clock off the row; it moves to its own line. */
+    .motto { order: 3; width: 100%; text-align: left; font-size: 14px; }
+    .masthead-right { gap: 6px; }
+    .clock .time { font-size: 15px; }
+
+    .timer-card { padding: 20px 18px; }
+    .timer-row { grid-template-columns: 1fr; gap: 12px; }
+    .timer-display { text-align: left; font-size: clamp(34px, 12vw, 44px); min-width: 0; }
+    .timer-actions { flex-wrap: wrap; }
+    .timer-actions .btn { flex: 1 1 auto; min-height: 44px; }
+
+    .entry { grid-template-columns: 8px 1fr auto; row-gap: 4px; column-gap: 10px; }
     .entry .range { grid-column: 2 / 3; }
     .entry .del { justify-self: end; }
-    .cal-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-    /* No room for the motto between the title and the clock on a phone. */
-    .motto { display: none; }
+    .day-detail .entry { grid-template-columns: 8px 1fr auto; }
+
+    /* Each control gets its own full-width line rather than wrapping raggedly. */
+    .goal-form { padding: 16px; gap: 10px; }
+    .goal-form-range { width: 100%; gap: 8px; }
+    .goal-form .goal-task,
+    .goal-form .goal-hours { flex: 1 1 100%; }
+    .goal-form select { flex: 1 1 calc(50% - 4px); }
+    .goal-form .btn { flex: 1 1 100%; margin-left: 0; }
+    .goal-dash { display: none; }
+
+    .goal-item { grid-template-columns: 1fr auto auto; row-gap: 8px; }
+    .goal-item .goal-status { grid-column: 1 / -1; justify-self: start; }
+    .goal-item.editing { grid-template-columns: 1fr; }
+    .goal-edit-controls { width: 100%; }
+    .goal-edit-controls select,
+    .goal-edit-controls input { flex: 1 1 calc(50% - 5px); }
+    .goal-edit-controls .btn { flex: 1 1 calc(50% - 5px); min-height: 40px; }
+
+    .cal-toolbar { gap: 10px; }
+    .cal-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .month-card { padding: 12px 10px 14px; }
+    .cal-legend { flex-wrap: wrap; row-gap: 6px; }
+  }
+
+  /* ---- Small phone ---- */
+  @media (max-width: 380px) {
+    .cal-grid { grid-template-columns: 1fr; }
+    .tab-btn + .tab-btn { margin-left: 12px; }
+    .summary-row, .entry, .goal-item { font-size: 14px; }
   }
 </style>
 
