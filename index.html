@@ -604,11 +604,44 @@
   .goal-list { display: flex; flex-direction: column; padding-top: 14px; }
   .goal-item {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto auto auto;
     align-items: center;
     gap: 14px;
     padding: 14px 4px;
     border-bottom: 1px solid var(--line);
+  }
+  .goal-item.editing { grid-template-columns: 1fr auto; }
+  .icon-btn {
+    background: none;
+    border: none;
+    color: var(--faint);
+    cursor: pointer;
+    padding: 4px;
+    line-height: 0;
+  }
+  .icon-btn:hover { color: var(--accent); }
+  .goal-edit-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .goal-edit-controls select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: var(--surface-2);
+    background-image: var(--select-arrow);
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0 38px 0 12px;
+    font-size: 14px;
+    height: 36px;
+    box-sizing: border-box;
+    cursor: pointer;
+  }
+  .goal-edit-controls .btn {
+    height: 36px;
+    padding: 0 16px;
+    line-height: 1;
+    box-sizing: border-box;
+    font-size: 13px;
   }
   .goal-item:last-child { border-bottom: none; }
   .goal-item .goal-name { font-size: 15px; }
@@ -1306,6 +1339,8 @@
     return "месяцев";
   }
 
+  var editingGoalId = null;
+
   function renderGoals() {
     els.goalList.innerHTML = "";
     els.goalsCount.textContent = goals.length ? goals.length + " шт." : "";
@@ -1323,22 +1358,115 @@
         return (a.year * 12 + a.startMonth) - (b.year * 12 + b.startMonth);
       })
       .forEach(function (g) {
-        var status = goalStatus(g);
-        var range = MONTH_NAMES[g.startMonth] +
-          (g.startMonth === g.endMonth ? "" : " — " + MONTH_NAMES[g.endMonth]) +
-          " " + g.year;
-
-        var row = document.createElement("div");
-        row.className = "goal-item";
-        row.innerHTML =
-          '<span>' +
-            '<span class="goal-name">' + escapeHtml(g.name) + '</span>' +
-            '<span class="goal-range">' + escapeHtml(range) + '</span>' +
-          '</span>' +
-          '<span class="goal-status ' + status.cls + '">' + escapeHtml(status.text) + '</span>' +
-          '<button class="del" title="Удалить" data-goal-id="' + g.id + '">✕</button>';
-        els.goalList.appendChild(row);
+        els.goalList.appendChild(g.id === editingGoalId ? buildGoalEditRow(g) : buildGoalRow(g));
       });
+  }
+
+  function buildGoalRow(g) {
+    var status = goalStatus(g);
+    var range = MONTH_NAMES[g.startMonth] +
+      (g.startMonth === g.endMonth ? "" : " — " + MONTH_NAMES[g.endMonth]) +
+      " " + g.year;
+
+    var row = document.createElement("div");
+    row.className = "goal-item";
+    row.innerHTML =
+      '<span>' +
+        '<span class="goal-name">' + escapeHtml(g.name) + '</span>' +
+        '<span class="goal-range">' + escapeHtml(range) + '</span>' +
+      '</span>' +
+      '<span class="goal-status ' + status.cls + '">' + escapeHtml(status.text) + '</span>' +
+      '<button class="icon-btn edit" title="Изменить срок" data-edit-id="' + g.id + '">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>' +
+        '</svg>' +
+      '</button>' +
+      '<button class="del" title="Удалить" data-goal-id="' + g.id + '">✕</button>';
+    return row;
+  }
+
+  // Editing swaps the row's status for the same month/year controls used when
+  // adding, so changing a deadline reads the same as setting one.
+  function buildGoalEditRow(g) {
+    var row = document.createElement("div");
+    row.className = "goal-item editing";
+
+    var name = document.createElement("span");
+    name.className = "goal-name";
+    name.textContent = g.name;
+
+    var controls = document.createElement("div");
+    controls.className = "goal-edit-controls";
+
+    var startSel = buildMonthSelect(g.startMonth);
+    var dash = document.createElement("span");
+    dash.className = "goal-dash";
+    dash.textContent = "—";
+    var endSel = buildMonthSelect(g.endMonth);
+    var yearSel = buildYearSelect(g.year);
+
+    var saveBtn = document.createElement("button");
+    saveBtn.className = "btn btn-start goal-save";
+    saveBtn.type = "button";
+    saveBtn.textContent = "Сохранить";
+    saveBtn.addEventListener("click", function () {
+      var start = Number(startSel.value);
+      var end = Number(endSel.value);
+      if (end < start) { var t = start; start = end; end = t; }
+      g.startMonth = start;
+      g.endMonth = end;
+      g.year = Number(yearSel.value);
+      editingGoalId = null;
+      persistGoals();
+      renderGoals();
+    });
+
+    var cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn goal-cancel";
+    cancelBtn.type = "button";
+    cancelBtn.textContent = "Отмена";
+    cancelBtn.addEventListener("click", function () {
+      editingGoalId = null;
+      renderGoals();
+    });
+
+    controls.appendChild(startSel);
+    controls.appendChild(dash);
+    controls.appendChild(endSel);
+    controls.appendChild(yearSel);
+    controls.appendChild(saveBtn);
+    controls.appendChild(cancelBtn);
+
+    row.appendChild(name);
+    row.appendChild(controls);
+    return row;
+  }
+
+  function buildMonthSelect(selected) {
+    var sel = document.createElement("select");
+    MONTH_NAMES.forEach(function (name, i) {
+      var opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    sel.value = selected;
+    return sel;
+  }
+
+  function buildYearSelect(selected) {
+    var sel = document.createElement("select");
+    var thisYear = new Date().getFullYear();
+    var from = Math.min(thisYear - 1, selected);
+    var to = Math.max(thisYear + 5, selected);
+    for (var y = from; y <= to; y++) {
+      var opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      sel.appendChild(opt);
+    }
+    sel.value = selected;
+    return sel;
   }
 
   els.addGoalBtn.addEventListener("click", function () {
@@ -1371,6 +1499,13 @@
   var pendingGoalDeleteTimer = null;
 
   els.goalList.addEventListener("click", function (ev) {
+    var editBtn = ev.target.closest(".edit");
+    if (editBtn) {
+      editingGoalId = editBtn.getAttribute("data-edit-id");
+      renderGoals();
+      return;
+    }
+
     var btn = ev.target.closest(".del");
     if (!btn) return;
     var id = btn.getAttribute("data-goal-id");
