@@ -618,6 +618,7 @@
   <nav class="tabs" role="tablist">
     <button class="tab-btn active" id="tabBtnTracker" role="tab" aria-selected="true" data-tab="tracker">Трекер</button>
     <button class="tab-btn" id="tabBtnCalendar" role="tab" aria-selected="false" data-tab="calendar">Календарь</button>
+    <button class="tab-btn" id="tabBtnGoals" role="tab" aria-selected="false" data-tab="goals">Цели</button>
   </nav>
 
   <div id="panelTracker" class="tab-panel">
@@ -687,6 +688,15 @@
         <span class="meta mono" id="dayDetailTotal"></span>
       </div>
       <div class="ledger" id="dayDetailLedger"></div>
+    </section>
+  </div>
+
+  <div id="panelGoals" class="tab-panel" hidden>
+    <section>
+      <div class="section-head">
+        <h2>Цели</h2>
+      </div>
+      <div class="empty">Здесь появятся цели по часам — например, «Java: 10 часов в неделю».</div>
     </section>
   </div>
 
@@ -790,6 +800,8 @@
     tabBtnCalendar: document.getElementById("tabBtnCalendar"),
     panelTracker: document.getElementById("panelTracker"),
     panelCalendar: document.getElementById("panelCalendar"),
+    tabBtnGoals: document.getElementById("tabBtnGoals"),
+    panelGoals: document.getElementById("panelGoals"),
     prevYearBtn: document.getElementById("prevYearBtn"),
     nextYearBtn: document.getElementById("nextYearBtn"),
     yearLabel: document.getElementById("yearLabel"),
@@ -1132,19 +1144,26 @@
     renderCalendar();
   });
 
+  var TABS = [
+    { name: "tracker", btn: "tabBtnTracker", panel: "panelTracker" },
+    { name: "calendar", btn: "tabBtnCalendar", panel: "panelCalendar" },
+    { name: "goals", btn: "tabBtnGoals", panel: "panelGoals" }
+  ];
+
   function switchTab(tab) {
-    var showCalendar = tab === "calendar";
-    els.panelTracker.hidden = showCalendar;
-    els.panelCalendar.hidden = !showCalendar;
-    els.tabBtnTracker.classList.toggle("active", !showCalendar);
-    els.tabBtnCalendar.classList.toggle("active", showCalendar);
-    els.tabBtnTracker.setAttribute("aria-selected", String(!showCalendar));
-    els.tabBtnCalendar.setAttribute("aria-selected", String(showCalendar));
-    if (showCalendar && !els.calGrid.childElementCount) renderCalendar();
+    TABS.forEach(function (t) {
+      var active = t.name === tab;
+      els[t.panel].hidden = !active;
+      els[t.btn].classList.toggle("active", active);
+      els[t.btn].setAttribute("aria-selected", String(active));
+    });
+    // The calendar is only built the first time it's opened.
+    if (tab === "calendar" && !els.calGrid.childElementCount) renderCalendar();
   }
 
-  els.tabBtnTracker.addEventListener("click", function () { switchTab("tracker"); });
-  els.tabBtnCalendar.addEventListener("click", function () { switchTab("calendar"); });
+  TABS.forEach(function (t) {
+    els[t.btn].addEventListener("click", function () { switchTab(t.name); });
+  });
 
   var tickHandle = null;
 
