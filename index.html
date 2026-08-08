@@ -400,19 +400,15 @@
   .summary { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; }
   .summary-row {
     display: grid;
-    grid-template-columns: 130px 1fr 64px;
+    grid-template-columns: 1fr auto;
     align-items: center;
     gap: 12px;
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--line);
   }
-  .summary-row .label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
-  .bar-track {
-    height: 8px;
-    background: var(--surface-2);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .bar-fill { height: 100%; border-radius: 4px; }
-  .summary-row .val { font-size: 13px; text-align: right; color: var(--ink); }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-row .label { font-size: 14px; color: var(--ink); display: flex; align-items: center; gap: 10px; }
+  .summary-row .val { font-size: 14px; text-align: right; color: var(--ink); }
   .summary-total {
     display: flex;
     justify-content: space-between;
@@ -900,15 +896,11 @@
       empty.textContent = "Записей за неделю пока нет.";
       els.weekSummary.appendChild(empty);
     } else {
-      var max = rows[0].dur;
       rows.forEach(function (r) {
-        var color = colorForTask(r.name);
         var row = document.createElement("div");
         row.className = "summary-row";
-        var pct = max > 0 ? Math.round((r.dur / max) * 100) : 0;
         row.innerHTML =
-          '<span class="label"><span class="dot" style="background:' + color + '"></span>' + escapeHtml(r.name) + '</span>' +
-          '<span class="bar-track"><span class="bar-fill" style="width:' + pct + '%; background:' + color + '"></span></span>' +
+          '<span class="label"><span class="dot" style="background:' + colorForTask(r.name) + '"></span>' + escapeHtml(r.name) + '</span>' +
           '<span class="val mono">' + fmtHoursShort(r.dur) + '</span>';
         els.weekSummary.appendChild(row);
       });
