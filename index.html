@@ -1257,7 +1257,9 @@
     els.goalStartMonth.value = thisMonth;
     els.goalEndMonth.value = Math.min(thisMonth + 2, 11);
 
-    for (var y = thisYear; y <= thisYear + 2; y++) {
+    // Last year stays reachable for goals already under way; five ahead is
+    // enough runway for long-term plans.
+    for (var y = thisYear - 1; y <= thisYear + 5; y++) {
       var opt = document.createElement("option");
       opt.value = y;
       opt.textContent = y;
