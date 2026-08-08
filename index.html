@@ -178,6 +178,12 @@
     color: var(--accent-ink);
     font-weight: 600;
   }
+  .btn-pause {
+    background: var(--surface-2);
+    border-color: var(--line);
+    color: var(--ink);
+    font-weight: 600;
+  }
   .btn-stop {
     background: var(--bad);
     border-color: var(--bad);
@@ -185,6 +191,7 @@
     font-weight: 600;
   }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .timer-display.paused { color: var(--muted); }
 
   /* ---- Section headers ---- */
   .section-head {
@@ -299,6 +306,7 @@
     </div>
     <div class="timer-actions">
       <button class="btn btn-start" id="startBtn">Старт</button>
+      <button class="btn btn-pause" id="pauseBtn" disabled>Пауза</button>
       <button class="btn btn-stop" id="stopBtn" disabled>Стоп</button>
     </div>
   </section>
@@ -349,11 +357,14 @@
   function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
   var entries = load(STORAGE_KEY, []);
-  var running = load(STATE_KEY, null); // { task, startedAt }
+  // running: { task, firstStartedAt, segmentStartedAt, accumulated, paused }
+  // segmentStartedAt is null while paused; accumulated holds ms from finished segments.
+  var running = load(STATE_KEY, null);
 
   var els = {
     taskInput: document.getElementById("taskInput"),
     startBtn: document.getElementById("startBtn"),
+    pauseBtn: document.getElementById("pauseBtn"),
     stopBtn: document.getElementById("stopBtn"),
     timerDisplay: document.getElementById("timerDisplay"),
     todayLedger: document.getElementById("todayLedger"),
@@ -391,6 +402,12 @@
     return d.getTime();
   }
 
+  // Older entries have no explicit duration (they predate pause support) —
+  // fall back to end - start for those.
+  function entryDuration(e) {
+    return typeof e.duration === "number" ? e.duration : (e.end - e.start);
+  }
+
   function renderTodayLedger() {
     var todayStart = startOfDay(Date.now());
     var todays = entries.filter(function (e) { return e.start >= todayStart; })
@@ -410,13 +427,13 @@
           '<span class="dot" style="background:' + colorForTask(e.task) + '"></span>' +
           '<span class="task">' + escapeHtml(e.task || "Без названия") + '</span>' +
           '<span class="range mono">' + fmtTimeOfDay(e.start) + '–' + fmtTimeOfDay(e.end) + '</span>' +
-          '<span class="dur mono">' + fmtHoursShort(e.end - e.start) + '</span>' +
+          '<span class="dur mono">' + fmtHoursShort(entryDuration(e)) + '</span>' +
           '<button class="del" title="Удалить" data-id="' + e.id + '">✕</button>';
         els.todayLedger.appendChild(row);
       });
     }
 
-    var totalMs = todays.reduce(function (sum, e) { return sum + (e.end - e.start); }, 0);
+    var totalMs = todays.reduce(function (sum, e) { return sum + entryDuration(e); }, 0);
     els.todayTotal.textContent = fmtHoursShort(totalMs);
   }
 
@@ -426,7 +443,7 @@
     var total = 0;
     entries.filter(function (e) { return e.start >= weekStart; }).forEach(function (e) {
       var name = e.task || "Без названия";
-      var dur = e.end - e.start;
+      var dur = entryDuration(e);
       byTask[name] = (byTask[name] || 0) + dur;
       total += dur;
     });
@@ -466,24 +483,41 @@
 
   var tickHandle = null;
 
+  function elapsedMs() {
+    if (!running) return 0;
+    return running.accumulated + (running.paused ? 0 : Date.now() - running.segmentStartedAt);
+  }
+
   function renderTimer() {
-    if (running) {
+    if (running && !running.paused) {
       els.timerDisplay.className = "timer-display running mono";
-      els.timerDisplay.textContent = fmtDuration(Date.now() - running.startedAt);
+      els.timerDisplay.textContent = fmtDuration(elapsedMs());
       els.startBtn.disabled = true;
+      els.pauseBtn.disabled = false;
+      els.pauseBtn.textContent = "Пауза";
+      els.stopBtn.disabled = false;
+      els.taskInput.disabled = true;
+    } else if (running && running.paused) {
+      els.timerDisplay.className = "timer-display paused mono";
+      els.timerDisplay.textContent = fmtDuration(elapsedMs());
+      els.startBtn.disabled = true;
+      els.pauseBtn.disabled = false;
+      els.pauseBtn.textContent = "Продолжить";
       els.stopBtn.disabled = false;
       els.taskInput.disabled = true;
     } else {
       els.timerDisplay.className = "timer-display idle mono";
       els.timerDisplay.textContent = "00:00:00";
       els.startBtn.disabled = false;
+      els.pauseBtn.disabled = true;
+      els.pauseBtn.textContent = "Пауза";
       els.stopBtn.disabled = true;
       els.taskInput.disabled = false;
     }
   }
 
   function tick() {
-    if (running) els.timerDisplay.textContent = fmtDuration(Date.now() - running.startedAt);
+    if (running && !running.paused) els.timerDisplay.textContent = fmtDuration(elapsedMs());
   }
 
   function updateClock() {
@@ -496,8 +530,25 @@
   els.startBtn.addEventListener("click", function () {
     running = {
       task: els.taskInput.value.trim(),
-      startedAt: Date.now()
+      firstStartedAt: Date.now(),
+      segmentStartedAt: Date.now(),
+      accumulated: 0,
+      paused: false
     };
+    save(STATE_KEY, running);
+    renderTimer();
+  });
+
+  els.pauseBtn.addEventListener("click", function () {
+    if (!running) return;
+    if (running.paused) {
+      running.segmentStartedAt = Date.now();
+      running.paused = false;
+    } else {
+      running.accumulated += Date.now() - running.segmentStartedAt;
+      running.segmentStartedAt = null;
+      running.paused = true;
+    }
     save(STATE_KEY, running);
     renderTimer();
   });
@@ -507,8 +558,9 @@
     var entry = {
       id: String(Date.now()) + Math.random().toString(16).slice(2),
       task: running.task,
-      start: running.startedAt,
-      end: Date.now()
+      start: running.firstStartedAt,
+      end: Date.now(),
+      duration: elapsedMs()
     };
     entries.push(entry);
     save(STORAGE_KEY, entries);
