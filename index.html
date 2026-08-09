@@ -801,8 +801,17 @@
     .goal-form .btn { flex: 1 1 100%; margin-left: 0; }
     .goal-dash { display: none; }
 
-    .goal-item { grid-template-columns: 1fr auto auto; row-gap: 8px; }
-    .goal-item .goal-status { grid-column: 1 / -1; justify-self: start; }
+    /* Name+hours stays on its own top line; edit and delete sit beside it,
+       level with the hours line rather than dropping below the status pill. */
+    .goal-item:not(.editing) {
+      grid-template-columns: 1fr auto auto;
+      grid-template-areas: "info edit del" "status status status";
+      row-gap: 8px;
+    }
+    .goal-item .goal-info { grid-area: info; }
+    .goal-item .goal-status { grid-area: status; justify-self: start; }
+    .goal-item .icon-btn.edit { grid-area: edit; }
+    .goal-item .del { grid-area: del; }
     .goal-item.editing { grid-template-columns: 1fr; }
     .goal-edit-controls { width: 100%; }
     .goal-edit-controls select,
@@ -1626,7 +1635,7 @@
     var row = document.createElement("div");
     row.className = "goal-item";
     row.innerHTML =
-      '<span>' +
+      '<span class="goal-info">' +
         '<span class="goal-name">' + escapeHtml(g.name) + '</span>' +
         '<span class="goal-range">' + escapeHtml(range) +
           // Only shown for old goals whose separately-typed task differs from
