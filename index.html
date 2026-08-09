@@ -975,8 +975,7 @@
       </div>
 
       <div class="goal-form">
-        <input type="text" id="goalNameInput" list="taskNames" placeholder="Название цели" autocomplete="off" />
-        <datalist id="taskNames"></datalist>
+        <input type="text" id="goalNameInput" placeholder="Название цели" autocomplete="off" />
         <div class="goal-form-range">
           <input type="number" id="goalHoursInput" class="goal-hours" min="1" step="1" placeholder="часов" />
           <select id="goalStartMonth" aria-label="Месяц начала"></select>
@@ -1098,7 +1097,6 @@
     panelGoals: document.getElementById("panelGoals"),
     goalNameInput: document.getElementById("goalNameInput"),
     goalHoursInput: document.getElementById("goalHoursInput"),
-    taskNames: document.getElementById("taskNames"),
     goalStartMonth: document.getElementById("goalStartMonth"),
     goalEndMonth: document.getElementById("goalEndMonth"),
     goalYear: document.getElementById("goalYear"),
@@ -1577,24 +1575,7 @@
 
   var editingGoalId = null;
 
-  // Suggests task names already used in the tracker, so a goal links to real
-  // entries instead of a near-miss spelling.
-  function refreshTaskSuggestions() {
-    var seen = {};
-    entries.forEach(function (e) {
-      var name = (e.task || "").trim();
-      if (name) seen[name] = true;
-    });
-    els.taskNames.innerHTML = "";
-    Object.keys(seen).sort().forEach(function (name) {
-      var opt = document.createElement("option");
-      opt.value = name;
-      els.taskNames.appendChild(opt);
-    });
-  }
-
   function renderGoals() {
-    refreshTaskSuggestions();
     els.goalList.innerHTML = "";
     els.goalsCount.textContent = goals.length ? goals.length + " шт." : "";
 
