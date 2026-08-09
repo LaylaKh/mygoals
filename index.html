@@ -602,9 +602,9 @@
   :root[data-theme="dark"] .day-cell:not(.blank):not(.future):hover { filter: brightness(1.25); }
 
   .day-detail { display: flex; flex-direction: column; gap: 12px; }
-  /* Day-detail rows are grouped by task (no per-session time range), so they
-     use one fewer column than the tracker's today-ledger rows. */
-  .day-detail .entry { grid-template-columns: 10px 1fr auto auto; }
+  /* Calendar rows are read-only (no delete) and grouped by task (no time
+     range), so they're just dot, name, duration. */
+  .day-detail .entry { grid-template-columns: 10px 1fr auto; }
   .session-count { font-size: 12px; color: var(--muted); }
   /* Year roll-up under the Dec 31 detail: same rule as every other section
      head, just spaced away from the day's own rows above it. */
@@ -806,14 +806,9 @@
     .entry .dur { grid-area: dur; justify-self: end; }
     .entry .del { grid-area: del; justify-self: end; align-self: start; }
 
-    /* Day-detail rows are grouped by task with no time range — dot spans a
-       single line, duration sits under the task, delete stays beside it. */
-    .day-detail .entry {
-      grid-template-columns: 10px 1fr auto;
-      grid-template-areas: "dot task del" "dot dur dur";
-    }
-    /* The Dec 31 year roll-up has no delete button, so it stays a single
-       line rather than inheriting the two-row layout above. */
+    /* Calendar rows (day detail and the Dec 31 year roll-up) are read-only
+       and grouped by task — just dot, name and duration on one line. */
+    .day-detail .entry,
     .year-summary-row {
       grid-template-columns: 10px 1fr auto;
       grid-template-areas: "dot task dur";
@@ -1459,8 +1454,7 @@
           '<span class="task">' + escapeHtml(g.name) +
             (g.ids.length > 1 ? ' <span class="session-count">× ' + g.ids.length + '</span>' : '') +
           '</span>' +
-          '<span class="dur mono">' + fmtHoursShort(g.totalMs) + '</span>' +
-          '<button class="del" title="Удалить" data-ids="' + g.ids.join(",") + '">✕</button>';
+          '<span class="dur mono">' + fmtHoursShort(g.totalMs) + '</span>';
         els.dayDetailLedger.appendChild(row);
       });
     }
@@ -2115,10 +2109,6 @@
 
   els.todayLedger.addEventListener("click", function (ev) {
     handleLedgerDeleteClick(ev, renderTodayLedger);
-  });
-
-  els.dayDetailLedger.addEventListener("click", function (ev) {
-    handleLedgerDeleteClick(ev, function () { renderDayDetail(selectedDateKey); });
   });
 
   els.taskInput.addEventListener("keydown", function (ev) {
