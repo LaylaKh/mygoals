@@ -721,10 +721,8 @@
     color: var(--ink);
     margin-top: 5px;
   }
-  .goal-task { flex: 0 1 150px; font-size: 14px !important; }
   .goal-hours { flex: 0 0 88px; font-size: 14px !important; }
   .goal-form input[type="number"],
-  .goal-form .goal-task,
   .goal-edit-controls input[type="number"],
   .goal-edit-controls input[type="text"] {
     background: var(--surface-2);
@@ -794,7 +792,6 @@
     /* Each control gets its own full-width line rather than wrapping raggedly. */
     .goal-form { padding: 16px; gap: 10px; }
     .goal-form-range { width: 100%; gap: 8px; }
-    .goal-form .goal-task,
     .goal-form .goal-hours { flex: 1 1 100%; }
     /* Start/end month pair up on one line; the year has no partner, so it
        gets the full line instead of sitting half-width with empty space
@@ -970,10 +967,9 @@
       </div>
 
       <div class="goal-form">
-        <input type="text" id="goalNameInput" placeholder="Название цели" autocomplete="off" />
+        <input type="text" id="goalNameInput" list="taskNames" placeholder="Название цели" autocomplete="off" />
+        <datalist id="taskNames"></datalist>
         <div class="goal-form-range">
-          <input type="text" id="goalTaskInput" class="goal-task" list="taskNames" placeholder="Задача в трекере" autocomplete="off" />
-          <datalist id="taskNames"></datalist>
           <input type="number" id="goalHoursInput" class="goal-hours" min="1" step="1" placeholder="часов" />
           <select id="goalStartMonth" aria-label="Месяц начала"></select>
           <span class="goal-dash">—</span>
@@ -1093,7 +1089,6 @@
     tabBtnGoals: document.getElementById("tabBtnGoals"),
     panelGoals: document.getElementById("panelGoals"),
     goalNameInput: document.getElementById("goalNameInput"),
-    goalTaskInput: document.getElementById("goalTaskInput"),
     goalHoursInput: document.getElementById("goalHoursInput"),
     taskNames: document.getElementById("taskNames"),
     goalStartMonth: document.getElementById("goalStartMonth"),
@@ -1516,9 +1511,13 @@
 
   // Hours actually tracked toward a goal: every entry whose task name matches
   // the goal's, dated inside the goal's month range.
+  // Matches against a task named separately when a goal still carries one
+  // (from before this field was removed); otherwise the goal's own name
+  // doubles as the tracker task name, so there's only one thing to type.
   function goalProgressMs(goal) {
-    if (!goal.task) return 0;
-    var wanted = goal.task.trim().toLowerCase();
+    var linkedTask = goal.task || goal.name;
+    if (!linkedTask) return 0;
+    var wanted = linkedTask.trim().toLowerCase();
     var from = new Date(goal.year, goal.startMonth, 1).getTime();
     var to = new Date(goal.year, goal.endMonth + 1, 1).getTime();
     return entries.reduce(function (sum, e) {
@@ -1630,7 +1629,9 @@
       '<span>' +
         '<span class="goal-name">' + escapeHtml(g.name) + '</span>' +
         '<span class="goal-range">' + escapeHtml(range) +
-          (g.task ? ' · ' + escapeHtml(g.task) : '') + '</span>' +
+          // Only shown for old goals whose separately-typed task differs from
+          // the name — new goals never set g.task, so this stays silent.
+          (g.task && g.task !== g.name ? ' · ' + escapeHtml(g.task) : '') + '</span>' +
         progressLine +
       '</span>' +
       '<span class="goal-status ' + status.cls + '">' + escapeHtml(status.text) + '</span>' +
@@ -1655,13 +1656,6 @@
 
     var controls = document.createElement("div");
     controls.className = "goal-edit-controls";
-
-    var taskInput = document.createElement("input");
-    taskInput.type = "text";
-    taskInput.className = "goal-task";
-    taskInput.setAttribute("list", "taskNames");
-    taskInput.placeholder = "Задача в трекере";
-    taskInput.value = g.task || "";
 
     var hoursInput = document.createElement("input");
     hoursInput.type = "number";
@@ -1688,7 +1682,6 @@
       g.startMonth = start;
       g.endMonth = end;
       g.year = Number(yearSel.value);
-      g.task = taskInput.value.trim();
       g.targetHours = Number(hoursInput.value) || 0;
       editingGoalId = null;
       persistGoals();
@@ -1704,7 +1697,6 @@
       renderGoals();
     });
 
-    controls.appendChild(taskInput);
     controls.appendChild(hoursInput);
     controls.appendChild(startSel);
     controls.appendChild(dash);
@@ -1759,7 +1751,6 @@
     goals.push({
       id: String(Date.now()) + Math.random().toString(16).slice(2),
       name: name,
-      task: els.goalTaskInput.value.trim(),
       targetHours: Number(els.goalHoursInput.value) || 0,
       year: Number(els.goalYear.value),
       startMonth: startMonth,
@@ -1767,7 +1758,6 @@
     });
     persistGoals();
     els.goalNameInput.value = "";
-    els.goalTaskInput.value = "";
     els.goalHoursInput.value = "";
     renderGoals();
   });
