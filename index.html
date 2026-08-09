@@ -796,7 +796,11 @@
     .goal-form-range { width: 100%; gap: 8px; }
     .goal-form .goal-task,
     .goal-form .goal-hours { flex: 1 1 100%; }
+    /* Start/end month pair up on one line; the year has no partner, so it
+       gets the full line instead of sitting half-width with empty space
+       next to it. */
     .goal-form select { flex: 1 1 calc(50% - 4px); }
+    .goal-form #goalYear { flex: 1 1 100%; margin-left: 0; }
     .goal-form .btn { flex: 1 1 100%; margin-left: 0; }
     .goal-dash { display: none; }
 
@@ -807,6 +811,9 @@
     .goal-edit-controls select,
     .goal-edit-controls input { flex: 1 1 calc(50% - 5px); }
     .goal-edit-controls .btn { flex: 1 1 calc(50% - 5px); min-height: 40px; }
+    /* Task/hours and start/end month already pair evenly; the year is the
+       odd one out, so it takes the full line instead of half with a gap. */
+    .goal-edit-controls .goal-year-select { flex: 1 1 100%; margin-left: 0; }
 
     .cal-toolbar { gap: 10px; }
     .cal-toolbar .section-head { flex: 1 1 100%; }
@@ -971,7 +978,7 @@
           <select id="goalStartMonth" aria-label="Месяц начала"></select>
           <span class="goal-dash">—</span>
           <select id="goalEndMonth" aria-label="Месяц окончания"></select>
-          <select id="goalYear" aria-label="Год"></select>
+          <select id="goalYear" class="goal-year-select" aria-label="Год"></select>
           <button class="btn btn-start" id="addGoalBtn" type="button">Добавить</button>
         </div>
       </div>
@@ -1725,6 +1732,7 @@
 
   function buildYearSelect(selected) {
     var sel = document.createElement("select");
+    sel.className = "goal-year-select";
     var thisYear = new Date().getFullYear();
     var from = Math.min(thisYear - 1, selected);
     var to = Math.max(thisYear + 5, selected);
