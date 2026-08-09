@@ -719,6 +719,25 @@
   }
   .goal-status.active { background: var(--accent-soft); color: var(--accent); }
   .goal-status.done { background: var(--good); color: #fff; }
+
+  /* Achieved goals collapse out of the way by default — nothing is deleted,
+     it's just tucked under a summary line so it stops crowding active ones. */
+  .achieved-section { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .achieved-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 14px;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+  .achieved-toggle:hover { color: var(--ink); }
+  .achieved-arrow { transition: transform 0.15s ease; flex: none; }
+  .achieved-toggle[aria-expanded="true"] .achieved-arrow { transform: rotate(180deg); }
+  .achieved-section .goal-list { padding-top: 8px; }
   .goal-status.missed { background: var(--surface-2); color: var(--bad); }
   .goal-progress {
     display: block;
@@ -1013,6 +1032,16 @@
       </div>
 
       <div class="goal-list" id="goalList"></div>
+
+      <div class="achieved-section" id="achievedSection" hidden>
+        <button class="achieved-toggle" id="achievedToggleBtn" type="button" aria-expanded="false">
+          <svg class="achieved-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 4.5l3 3 3-3"/>
+          </svg>
+          <span id="achievedToggleLabel">Достигнуто: 0 целей</span>
+        </button>
+        <div class="goal-list" id="achievedList" hidden></div>
+      </div>
     </section>
   </div>
 
@@ -1131,6 +1160,10 @@
     goalYear: document.getElementById("goalYear"),
     addGoalBtn: document.getElementById("addGoalBtn"),
     goalList: document.getElementById("goalList"),
+    achievedSection: document.getElementById("achievedSection"),
+    achievedToggleBtn: document.getElementById("achievedToggleBtn"),
+    achievedToggleLabel: document.getElementById("achievedToggleLabel"),
+    achievedList: document.getElementById("achievedList"),
     goalsCount: document.getElementById("goalsCount"),
     prevYearBtn: document.getElementById("prevYearBtn"),
     nextYearBtn: document.getElementById("nextYearBtn"),
@@ -1603,26 +1636,65 @@
 
   var editingGoalId = null;
 
+  function byStartDate(a, b) {
+    return (a.year * 12 + a.startMonth) - (b.year * 12 + b.startMonth);
+  }
+
+  var achievedExpanded = false;
+
   function renderGoals() {
-    els.goalList.innerHTML = "";
     els.goalsCount.textContent = goals.length ? goals.length + " шт." : "";
 
+    var active = [];
+    var achieved = [];
+    goals.forEach(function (g) {
+      (goalStatus(g).cls === "done" ? achieved : active).push(g);
+    });
+    active.sort(byStartDate);
+    achieved.sort(byStartDate);
+
+    // Active list: goals still in progress, plus ones with a missed deadline.
+    els.goalList.innerHTML = "";
     if (goals.length === 0) {
       var empty = document.createElement("div");
       empty.className = "empty";
       empty.textContent = "Целей пока нет — добавьте первую выше.";
       els.goalList.appendChild(empty);
-      return;
-    }
-
-    goals.slice()
-      .sort(function (a, b) {
-        return (a.year * 12 + a.startMonth) - (b.year * 12 + b.startMonth);
-      })
-      .forEach(function (g) {
+    } else if (active.length === 0) {
+      var allDone = document.createElement("div");
+      allDone.className = "empty";
+      allDone.textContent = "Все цели достигнуты 🎉 Загляни в «Достигнуто» ниже.";
+      els.goalList.appendChild(allDone);
+    } else {
+      active.forEach(function (g) {
         els.goalList.appendChild(g.id === editingGoalId ? buildGoalEditRow(g) : buildGoalRow(g));
       });
+    }
+
+    // Achieved goals collapse into their own section — nothing here ever
+    // touches tracked hours or the calendar, it's purely about what's shown.
+    els.achievedSection.hidden = achieved.length === 0;
+    els.achievedToggleLabel.textContent = "Достигнуто: " + achieved.length + " " + pluralGoals(achieved.length);
+    els.achievedList.innerHTML = "";
+    achieved.forEach(function (g) {
+      els.achievedList.appendChild(g.id === editingGoalId ? buildGoalEditRow(g) : buildGoalRow(g));
+    });
+    els.achievedList.hidden = !achievedExpanded;
+    els.achievedToggleBtn.setAttribute("aria-expanded", String(achievedExpanded));
   }
+
+  function pluralGoals(n) {
+    var mod10 = n % 10, mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return "цель";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "цели";
+    return "целей";
+  }
+
+  els.achievedToggleBtn.addEventListener("click", function () {
+    achievedExpanded = !achievedExpanded;
+    els.achievedList.hidden = !achievedExpanded;
+    els.achievedToggleBtn.setAttribute("aria-expanded", String(achievedExpanded));
+  });
 
   function buildGoalRow(g) {
     var status = goalStatus(g);
@@ -1786,7 +1858,7 @@
   var pendingGoalDeleteId = null;
   var pendingGoalDeleteTimer = null;
 
-  els.goalList.addEventListener("click", function (ev) {
+  function handleGoalListClick(ev) {
     var editBtn = ev.target.closest(".edit");
     if (editBtn) {
       editingGoalId = editBtn.getAttribute("data-edit-id");
@@ -1816,7 +1888,12 @@
     goals = goals.filter(function (g) { return g.id !== id; });
     persistGoals();
     renderGoals();
-  });
+  }
+
+  // Same delete/edit behavior whether the goal is in the active list or
+  // collapsed under "Достигнуто".
+  els.goalList.addEventListener("click", handleGoalListClick);
+  els.achievedList.addEventListener("click", handleGoalListClick);
 
   var TABS = [
     { name: "tracker", btn: "tabBtnTracker", panel: "panelTracker" },
