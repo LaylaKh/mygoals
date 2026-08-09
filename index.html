@@ -447,11 +447,17 @@
   .summary-total .n { font-size: 18px; }
 
   footer.hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
     text-align: center;
     color: var(--faint);
     font-size: 12px;
     padding-top: 8px;
   }
+  .contact-link { color: var(--muted); text-decoration: underline; }
+  .contact-link:hover { color: var(--accent); }
 
   /* ---- Tabs ---- */
   .tabs {
@@ -992,7 +998,10 @@
 
   </div>
 
-  <footer class="hint">Данные привязаны к вашему Google-аккаунту и синхронизируются между устройствами.</footer>
+  <footer class="hint">
+    <span>Данные привязаны к вашему Google-аккаунту и синхронизируются между устройствами.</span>
+    <a class="contact-link" href="https://t.me/khlayla" target="_blank" rel="noopener noreferrer">Контакты</a>
+  </footer>
 </div>
 
 <script>
