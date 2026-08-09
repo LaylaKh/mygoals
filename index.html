@@ -789,10 +789,35 @@
     .timer-actions { flex-wrap: wrap; }
     .timer-actions .btn { flex: 1 1 auto; min-height: 44px; }
 
-    .entry { grid-template-columns: 8px 1fr auto; row-gap: 4px; column-gap: 10px; }
-    .entry .range { grid-column: 2 / 3; }
-    .entry .del { justify-self: end; }
-    .day-detail .entry { grid-template-columns: 8px 1fr auto; }
+    /* Explicit areas rather than relying on auto-placement: the row has more
+       items (dot, task, range, duration, delete) than the 3 mobile columns
+       can hold side by side, and auto-placement scattered the delete button
+       onto its own line far from the task it belonged to. The dot spans both
+       lines as a tall marker; delete sits level with the task name. */
+    .entry {
+      grid-template-columns: 10px 1fr auto;
+      grid-template-areas: "dot task del" "dot range dur";
+      row-gap: 4px;
+      column-gap: 10px;
+    }
+    .entry .dot { grid-area: dot; }
+    .entry .task { grid-area: task; }
+    .entry .range { grid-area: range; }
+    .entry .dur { grid-area: dur; justify-self: end; }
+    .entry .del { grid-area: del; justify-self: end; align-self: start; }
+
+    /* Day-detail rows are grouped by task with no time range — dot spans a
+       single line, duration sits under the task, delete stays beside it. */
+    .day-detail .entry {
+      grid-template-columns: 10px 1fr auto;
+      grid-template-areas: "dot task del" "dot dur dur";
+    }
+    /* The Dec 31 year roll-up has no delete button, so it stays a single
+       line rather than inheriting the two-row layout above. */
+    .year-summary-row {
+      grid-template-columns: 10px 1fr auto;
+      grid-template-areas: "dot task dur";
+    }
 
     /* Each control gets its own full-width line rather than wrapping raggedly. */
     .goal-form { padding: 16px; gap: 10px; }
