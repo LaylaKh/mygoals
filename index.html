@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-title" content="Трекер" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="theme-color" content="#e6d9bf" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#cbd5db" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#14181f" media="(prefers-color-scheme: dark)" />
-<link rel="manifest" href='data:application/manifest+json,{"name":"Трекер","short_name":"Трекер","display":"standalone","orientation":"any","background_color":"%23e6d9bf","theme_color":"%23e6d9bf","start_url":"./","icons":[{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 rx=%2242%22 fill=%22%2314181f%22/%3E%3Ccircle cx=%2296%22 cy=%22100%22 r=%2246%22 fill=%22none%22 stroke=%22%23e0a44a%22 stroke-width=%229%22/%3E%3Cpath d=%22M96 72v30l20 12%22 fill=%22none%22 stroke=%22%23e0a44a%22 stroke-width=%229%22 stroke-linecap=%22round%22/%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml","purpose":"any"}]}' />
+<link rel="manifest" href='data:application/manifest+json,{"name":"Трекер","short_name":"Трекер","display":"standalone","orientation":"any","background_color":"%23cbd5db","theme_color":"%23cbd5db","start_url":"./","icons":[{"src":"data:image/svg%2Bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 rx=%2242%22 fill=%22%2314181f%22/%3E%3Ccircle cx=%2296%22 cy=%22100%22 r=%2246%22 fill=%22none%22 stroke=%22%23e0a44a%22 stroke-width=%229%22/%3E%3Cpath d=%22M96 72v30l20 12%22 fill=%22none%22 stroke=%22%23e0a44a%22 stroke-width=%229%22 stroke-linecap=%22round%22/%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml","purpose":"any"}]}' />
 <script>
   // Applied before first paint so a remembered theme never flashes the other one.
   try {
@@ -20,31 +20,31 @@
   } catch (e) { /* storage unavailable — fall back to the system theme */ }
 </script>
 <style>
-  /* Warm amber accent in two keys. Light key: "Coastal Sand" — a warm beach-
-     sand neutral instead of the cooler cream we had before. The block below
-     is the complete definition; the two dark blocks restate only the tokens,
-     so nothing ever depends on a color declared solely inside a media or
-     [data-theme] rule. */
+  /* Warm amber accent in two keys. Light key: "Ocean Mist" — a cool blue-grey
+     neutral, with the amber accent standing out warm against it. The block
+     below is the complete definition; the two dark blocks restate only the
+     tokens, so nothing ever depends on a color declared solely inside a
+     media or [data-theme] rule. */
   :root {
-    --bg: #e6d9bf;
-    --surface: #fbf7ee;
-    --surface-2: #dbc9a0;
-    --ink: #2f2818;
-    --muted: #6c5d42;
-    --faint: #9c8e6c;
-    --line: #cdb98c;
+    --bg: #cbd5db;
+    --surface: #f4f8f9;
+    --surface-2: #b9c6ce;
+    --ink: #1b2429;
+    --muted: #52636c;
+    --faint: #8296a1;
+    --line: #a9bac3;
     --accent: #a8672a;
     --accent-ink: #ffffff;
-    --accent-soft: #f0dfb8;
+    --accent-soft: #ecdcc0;
     --good: #4a7d43;
     --bad: #b1503c;
-    --shadow: 0 1px 2px rgba(43, 34, 15, 0.08), 0 8px 24px -12px rgba(43, 34, 15, 0.25);
-    --heat-0: #dbc9a0;
-    --heat-1: #f0dfb8;
+    --shadow: 0 1px 2px rgba(20, 30, 36, 0.08), 0 8px 24px -12px rgba(20, 30, 36, 0.25);
+    --heat-0: #b9c6ce;
+    --heat-1: #ecdcc0;
     --heat-2: #dfb96a;
     --heat-3: #c68f34;
     --heat-4: #8f611e;
-    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236c5d42' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2352636c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
