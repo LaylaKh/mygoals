@@ -1105,8 +1105,14 @@
   // so the same task always gets the same dot color across sessions.
   var PALETTE = ["#a8672a", "#4f7a4a", "#6a7fb5", "#b1503c", "#8a6aa8", "#5c8a8f"];
 
+  // Case-insensitive everywhere a task name is used as an identity (color,
+  // grouping, goal matching) — "Java" and "java" are the same task.
+  function normalizeTaskName(name) {
+    return (name || "Без названия").trim().toLowerCase();
+  }
+
   function colorForTask(name) {
-    var str = name || "Без названия";
+    var str = normalizeTaskName(name);
     var hash = 0;
     for (var i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
     return PALETTE[hash % PALETTE.length];
@@ -1256,15 +1262,16 @@
     var byTask = {};
     var total = 0;
     entries.filter(function (e) { return e.start >= weekStart; }).forEach(function (e) {
-      var name = e.task || "Без названия";
+      var key = normalizeTaskName(e.task);
       var dur = entryDuration(e);
-      byTask[name] = (byTask[name] || 0) + dur;
+      if (!byTask[key]) byTask[key] = { name: e.task || "Без названия", dur: 0 };
+      byTask[key].dur += dur;
       total += dur;
     });
 
     els.weekSummary.innerHTML = "";
     var rows = Object.keys(byTask)
-      .map(function (name) { return { name: name, dur: byTask[name] }; })
+      .map(function (key) { return byTask[key]; })
       .sort(function (a, b) { return b.dur - a.dur; });
 
     if (rows.length === 0) {
@@ -1416,12 +1423,14 @@
     var byTask = {};
     var order = [];
     list.forEach(function (e) {
-      var name = e.task || "Без названия";
-      if (!byTask[name]) { byTask[name] = { name: name, totalMs: 0, ids: [] }; order.push(name); }
-      byTask[name].totalMs += entryDuration(e);
-      byTask[name].ids.push(e.id);
+      var key = normalizeTaskName(e.task);
+      // The display name keeps whichever casing was typed first, so the
+      // group still reads like a name instead of a lowercase key.
+      if (!byTask[key]) { byTask[key] = { name: e.task || "Без названия", totalMs: 0, ids: [] }; order.push(key); }
+      byTask[key].totalMs += entryDuration(e);
+      byTask[key].ids.push(e.id);
     });
-    return order.map(function (name) { return byTask[name]; })
+    return order.map(function (key) { return byTask[key]; })
       .sort(function (a, b) { return b.totalMs - a.totalMs; });
   }
 
