@@ -42,7 +42,9 @@
     --heat-2: #40c463;
     --heat-3: #30a14e;
     --heat-4: #216e39;
-    --heat-ink-3: var(--ink);
+    --heat-ink-1: #1a1d24;
+    --heat-ink-2: #1a1d24;
+    --heat-ink-3: #1a1d24;
     --heat-ink-4: #ffffff;
     --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235b6270' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     color-scheme: light;
@@ -63,12 +65,14 @@
       --bad: #d97a63;
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 28px -12px rgba(0, 0, 0, 0.6);
       --heat-0: #161b22;
-      --heat-1: #0e4429;
-      --heat-2: #006d32;
-      --heat-3: #26a641;
-      --heat-4: #39d353;
-      --heat-ink-3: #0d1810;
-      --heat-ink-4: #0d1810;
+      --heat-1: #9be9a8;
+      --heat-2: #40c463;
+      --heat-3: #237a42;
+      --heat-4: #164d2b;
+      --heat-ink-1: #10200f;
+      --heat-ink-2: #10200f;
+      --heat-ink-3: #eef7ee;
+      --heat-ink-4: #eef7ee;
       --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2399a2b1' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
       color-scheme: dark;
     }
@@ -88,12 +92,14 @@
     --bad: #d97a63;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 28px -12px rgba(0, 0, 0, 0.6);
     --heat-0: #161b22;
-    --heat-1: #0e4429;
-    --heat-2: #006d32;
-    --heat-3: #26a641;
-    --heat-4: #39d353;
-    --heat-ink-3: #0d1810;
-    --heat-ink-4: #0d1810;
+    --heat-1: #9be9a8;
+    --heat-2: #40c463;
+    --heat-3: #237a42;
+    --heat-4: #164d2b;
+    --heat-ink-1: #10200f;
+    --heat-ink-2: #10200f;
+    --heat-ink-3: #eef7ee;
+    --heat-ink-4: #eef7ee;
     --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2399a2b1' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
@@ -591,8 +597,8 @@
     padding: 0;
   }
   .day-cell.blank { visibility: hidden; cursor: default; }
-  .day-cell.heat-1 { background: var(--heat-1); color: var(--ink); }
-  .day-cell.heat-2 { background: var(--heat-2); color: var(--ink); }
+  .day-cell.heat-1 { background: var(--heat-1); color: var(--heat-ink-1); }
+  .day-cell.heat-2 { background: var(--heat-2); color: var(--heat-ink-2); }
   .day-cell.heat-3 { background: var(--heat-3); color: var(--heat-ink-3); }
   .day-cell.heat-4 { background: var(--heat-4); color: var(--heat-ink-4); }
   /* 40+ minutes in a day counts as the goal met — overrides the heat scale
