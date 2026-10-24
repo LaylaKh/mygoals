@@ -37,15 +37,11 @@
     --good: #4a7d43;
     --bad: #b1503c;
     --shadow: 0 1px 2px rgba(26, 29, 36, 0.06), 0 8px 24px -12px rgba(26, 29, 36, 0.2);
-    --heat-0: #ebedf0;
-    --heat-1: #9be9a8;
-    --heat-2: #40c463;
-    --heat-3: #30a14e;
-    --heat-4: #216e39;
-    --heat-ink-1: #1a1d24;
-    --heat-ink-2: #1a1d24;
-    --heat-ink-3: #1a1d24;
-    --heat-ink-4: #ffffff;
+    --heat-0: #eae5da;
+    --heat-1: #f6e4c4;
+    --heat-2: #e3b96e;
+    --heat-3: #c9902f;
+    --heat-4: #96661a;
     --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235b6270' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     color-scheme: light;
   }
@@ -64,15 +60,11 @@
       --good: #6faa69;
       --bad: #d97a63;
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 28px -12px rgba(0, 0, 0, 0.6);
-      --heat-0: #2a333f;
-      --heat-1: #9be9a8;
-      --heat-2: #40c463;
-      --heat-3: #237a42;
-      --heat-4: #164d2b;
-      --heat-ink-1: #10200f;
-      --heat-ink-2: #10200f;
-      --heat-ink-3: #eef7ee;
-      --heat-ink-4: #eef7ee;
+      --heat-0: #2f3947;
+      --heat-1: #3b2e16;
+      --heat-2: #6d5120;
+      --heat-3: #a5762a;
+      --heat-4: #e0a44a;
       --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2399a2b1' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
       color-scheme: dark;
     }
@@ -91,15 +83,11 @@
     --good: #6faa69;
     --bad: #d97a63;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 28px -12px rgba(0, 0, 0, 0.6);
-    --heat-0: #2a333f;
-    --heat-1: #9be9a8;
-    --heat-2: #40c463;
-    --heat-3: #237a42;
-    --heat-4: #164d2b;
-    --heat-ink-1: #10200f;
-    --heat-ink-2: #10200f;
-    --heat-ink-3: #eef7ee;
-    --heat-ink-4: #eef7ee;
+    --heat-0: #2f3947;
+    --heat-1: #3b2e16;
+    --heat-2: #6d5120;
+    --heat-3: #a5762a;
+    --heat-4: #e0a44a;
     --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2399a2b1' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
@@ -536,7 +524,7 @@
   .cal-legend .dot.heat-2 { background: var(--heat-2); }
   .cal-legend .dot.heat-3 { background: var(--heat-3); }
   .cal-legend .dot.heat-4 { background: var(--heat-4); }
-  .cal-legend .dot.goal-met { background: var(--heat-4); }
+  .cal-legend .dot.goal-met { background: var(--good); }
   .cal-legend-sep { width: 1px; height: 12px; background: var(--line); margin: 0 4px; }
 
   /* One month at a time. Swiping or the arrows move through the year, so the
@@ -597,14 +585,13 @@
     padding: 0;
   }
   .day-cell.blank { visibility: hidden; cursor: default; }
-  .day-cell.heat-1 { background: var(--heat-1); color: var(--heat-ink-1); }
-  .day-cell.heat-2 { background: var(--heat-2); color: var(--heat-ink-2); }
-  .day-cell.heat-3 { background: var(--heat-3); color: var(--heat-ink-3); }
-  .day-cell.heat-4 { background: var(--heat-4); color: var(--heat-ink-4); }
-  /* 40+ minutes in a day is the darkest shade on the scale — the brightest
-     is for any activity under that, so the two ends read as "a little" vs
-     "a lot" at a glance. */
-  .day-cell.goal-met { background: var(--heat-4); color: var(--heat-ink-4); }
+  .day-cell.heat-1 { background: var(--heat-1); color: var(--ink); }
+  .day-cell.heat-2 { background: var(--heat-2); color: var(--ink); }
+  .day-cell.heat-3 { background: var(--heat-3); color: #fff; }
+  .day-cell.heat-4 { background: var(--heat-4); color: #fff; }
+  /* 40+ minutes in a day counts as the goal met — overrides the heat scale
+     with a distinct green, regardless of how much further past it. */
+  .day-cell.goal-met { background: var(--good); color: #fff; }
   .day-cell.future { opacity: 0.45; cursor: default; }
   .day-cell.is-today { box-shadow: inset 0 0 0 2px var(--accent); }
   .day-cell.selected { box-shadow: inset 0 0 0 2px var(--ink); }
