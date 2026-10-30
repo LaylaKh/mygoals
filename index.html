@@ -1713,7 +1713,10 @@
 
     var progressLine = "";
     if (g.targetHours > 0) {
-      var doneHours = goalProgressMs(g) / 3600000;
+      // Once a goal reaches its target, its own number stops climbing —
+      // the underlying sessions keep logging to the Calendar as normal,
+      // they just no longer inflate an already-finished goal's count.
+      var doneHours = Math.min(goalProgressMs(g) / 3600000, g.targetHours);
       var pct = Math.min(100, Math.round((doneHours / g.targetHours) * 100));
       progressLine =
         '<span class="goal-progress mono">' +
